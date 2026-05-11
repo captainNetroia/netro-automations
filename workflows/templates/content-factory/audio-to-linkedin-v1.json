@@ -1,0 +1,220 @@
+{
+  "name": "System - Content Factory",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        144,
+        -32
+      ],
+      "id": "bba59386-10fd-4d99-a3d6-a0d95131ae55",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        704,
+        -32
+      ],
+      "id": "157c2d88-79f8-42a8-a8e2-abe4e8f14e28",
+      "name": "AI Agent Créateur de contenu"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        144
+      ],
+      "id": "616b6795-d2ae-4d0e-89b5-da70bce54930",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedInTool",
+      "typeVersion": 1,
+      "position": [
+        912,
+        144
+      ],
+      "id": "60bc2503-2ebe-4f78-83b4-969640d06512",
+      "name": "Create a post in LinkedIn"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "10YRZEdYUAl4nvYFgiYBK8K5bFtNfH7vb",
+          "mode": "list",
+          "cachedResultName": "IAvocal test.m4a",
+          "cachedResultUrl": "https://drive.google.com/file/d/10YRZEdYUAl4nvYFgiYBK8K5bFtNfH7vb/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -112,
+        -32
+      ],
+      "id": "96da785a-1d06-4d43-8a2f-ff4a450665d5",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "AweiXG4hhr9gRHf5",
+          "name": "Captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1W7YPnbA4uv72CZz8ad9QEuDrGz2YHZjJ",
+        "title": "Idée post linkedIn"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        352,
+        -32
+      ],
+      "id": "d10d5fe1-4c6a-4abb-82be-26f307a44c94",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "bs5eChjQo4Ti5SrW",
+          "name": "Google Docs captain"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Download file": [
+      {
+        "json": {},
+        "binary": {
+          "data": {
+            "mimeType": "audio/x-m4a",
+            "fileType": "audio",
+            "fileExtension": "m4a",
+            "data": "filesystem-v2",
+            "fileName": "IAvocal test.m4a",
+            "id": "filesystem-v2:workflows/6ANIEaba330sHxIn/executions/40/binary_data/4a0e3a60-08d1-41db-81c5-d7c93dfad134",
+            "fileSize": "1.19 MB"
+          }
+        }
+      }
+    ],
+    "Transcribe a recording": [
+      {
+        "json": {
+          "text": "J'aimerais créer une noté pour pouvoir parler des spécificités de l'IA dans le monde, les apports, le gain de temps et comment l'utiliser et à quel point il peut vraiment être utile pour les entreprises, leur faire gagner un temps et beaucoup d'argent. À ce niveau-là, j'aimerais pouvoir créer un poste LinkedIn pour tout ce qui a un rapport avec les nouvelles technologies d'aujourd'hui et la nouvelle actualité, la vitesse d'apprentissage de l'IA et d'évolution.",
+          "usage": {
+            "type": "duration",
+            "seconds": 47
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Créateur de contenu",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post in LinkedIn": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Créateur de contenu",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Créateur de contenu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fb2e5c37-133d-4171-9dbf-9f09fbc1e264",
+  "meta": {
+    "instanceId": "d1117b063e960848a7bce8e77a8fc680199da682ac55c2b42990e570883b3d0e"
+  },
+  "id": "6ANIEaba330sHxIn",
+  "tags": []
+}

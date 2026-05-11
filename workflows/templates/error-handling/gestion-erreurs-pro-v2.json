@@ -1,0 +1,541 @@
+{
+  "name": "NetroIA - Gestion Erreurs Pro",
+  "nodes": [
+    {
+      "id": "n-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        360
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n-extract",
+      "name": "Extraire Contexte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        360
+      ],
+      "parameters": {
+        "jsCode": "const e = $input.item.json;\nconst workflow_name  = e.workflow?.name || 'inconnu';\nconst workflow_id    = e.workflow?.id   || '';\nconst execution_id   = e.execution?.id  || '';\nconst last_node      = e.execution?.lastNodeExecuted || '';\nconst error_message  = e.execution?.error?.message || e.error?.message || 'erreur inconnue';\nconst timestamp      = new Date().toISOString();\nreturn [{ json: { workflow_name, workflow_id, execution_id, last_node, error_message, timestamp } }];"
+      }
+    },
+    {
+      "id": "n-fp",
+      "name": "Calculer Fingerprint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        360
+      ],
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst empreinte = (d.workflow_id + '|' + d.last_node + '|' + d.error_message)\n  .toLowerCase().replace(/[0-9]+/g, '#').replace(/\\s+/g, ' ').trim().slice(0, 180);\nconst isCritique  = /500|fatal|crash|cannot read|undefined is not|permission|401|403|ECONNREFUSED|timeout/.test(d.error_message);\nconst isTechnique = /401|403|429|timeout|ECONN|ENOTFOUND|rate|credential|auth|token/.test(d.error_message);\nconst gravite   = isCritique ? 'P1' : 'P2';\nconst categorie = isTechnique ? 'TECHNIQUE' : 'METIER';\nreturn [{ json: { ...d, empreinte, gravite, categorie, occurrences: 1 } }];"
+      }
+    },
+    {
+      "id": "n-getall",
+      "name": "Lire Erreurs",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        360
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "dataTableId": {
+          "__rl": true,
+          "value": "aRZ1JedsE72lla1s",
+          "mode": "list",
+          "cachedResultName": "Erreur Interne N8N"
+        }
+      }
+    },
+    {
+      "id": "n-detect",
+      "name": "Detecter Doublon",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        360
+      ],
+      "parameters": {
+        "jsCode": "const allRows = $input.all();\nconst fpData = $('Calculer Fingerprint').first().json;\nconst match = allRows.find(r => r.json.empreinte_erreur === fpData.empreinte);\nconst is_duplicate = !!match;\nconst existing_occurrences = match ? (match.json.occurrences || 1) : 0;\nreturn [{ json: { ...fpData, is_duplicate, existing_occurrences } }];"
+      }
+    },
+    {
+      "id": "n-if",
+      "name": "Est Doublon",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_duplicate }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n-update",
+      "name": "Incrementer Occurrence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1460,
+        200
+      ],
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "aRZ1JedsE72lla1s",
+          "mode": "list",
+          "cachedResultName": "Erreur Interne N8N"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "id": "f-update",
+              "leftValue": "={{ $json.empreinte }}",
+              "rightValue": "empreinte_erreur",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "occurrences": "={{ ($json.existing_occurrences || 0) + 1 }}",
+            "horodatage_dernier": "={{ $json.timestamp }}"
+          },
+          "schema": [
+            {
+              "id": "occurrences",
+              "displayName": "occurrences",
+              "type": "number",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "horodatage_dernier",
+              "displayName": "horodatage_dernier",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-insert",
+      "name": "Inserer Erreur",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1460,
+        520
+      ],
+      "parameters": {
+        "operation": "create",
+        "dataTableId": {
+          "__rl": true,
+          "value": "aRZ1JedsE72lla1s",
+          "mode": "list",
+          "cachedResultName": "Erreur Interne N8N"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "workflow_name": "={{ $json.workflow_name }}",
+            "workflow_id": "={{ $json.workflow_id }}",
+            "execution_id": "={{ $json.execution_id }}",
+            "last_node": "={{ $json.last_node }}",
+            "error_message": "={{ $json.error_message }}",
+            "empreinte_erreur": "={{ $json.empreinte }}",
+            "gravite": "={{ $json.gravite }}",
+            "categorie": "={{ $json.categorie }}",
+            "occurrences": 1,
+            "horodatage": "={{ $json.timestamp }}",
+            "horodatage_dernier": "={{ $json.timestamp }}"
+          },
+          "schema": [
+            {
+              "id": "workflow_name",
+              "displayName": "workflow_name",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "workflow_id",
+              "displayName": "workflow_id",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "last_node",
+              "displayName": "last_node",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "empreinte_erreur",
+              "displayName": "empreinte_erreur",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "gravite",
+              "displayName": "gravite",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "categorie",
+              "displayName": "categorie",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "occurrences",
+              "displayName": "occurrences",
+              "type": "number",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "horodatage",
+              "displayName": "horodatage",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            },
+            {
+              "id": "horodatage_dernier",
+              "displayName": "horodatage_dernier",
+              "type": "string",
+              "required": false,
+              "defaultMatch": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-router",
+      "name": "Router Gravite",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1660,
+        360
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "P1",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "rule-p1",
+                    "leftValue": "={{ $json.gravite }}",
+                    "rightValue": "P1",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "P2",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "rule-p2",
+                    "leftValue": "={{ $json.gravite }}",
+                    "rightValue": "P2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 2
+        }
+      }
+    },
+    {
+      "id": "n-slack-p1",
+      "name": "Slack Alerte P1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1860,
+        200
+      ],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "F0fwc1wXChlIz1fb",
+          "name": "NetroIA Error N8N"
+        }
+      },
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A8SHN845D",
+          "mode": "list",
+          "cachedResultName": "n8n-alerts"
+        },
+        "text": "=🚨 [P1 CRITIQUE] {{ $json.workflow_name }}\nNoeud: {{ $json.last_node }}\nErreur: {{ $json.error_message }}\nCatégorie: {{ $json.categorie }}\n{{ $json.timestamp }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "n-gmail-p1",
+      "name": "Gmail Alerte P1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2060,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Bayzmr9ePmWdToL",
+          "name": "captain"
+        }
+      },
+      "parameters": {
+        "sendTo": "captain@netroia.com",
+        "subject": "=[P1 CRITIQUE] {{ $json.workflow_name }} — {{ $json.last_node }}",
+        "emailType": "text",
+        "message": "=ERREUR CRITIQUE\n\nWorkflow : {{ $json.workflow_name }}\nNoeud    : {{ $json.last_node }}\nErreur   : {{ $json.error_message }}\nGravité  : {{ $json.gravite }} | {{ $json.categorie }}\n{{ $json.timestamp }}",
+        "options": {
+          "senderName": "NetroIA Monitoring"
+        }
+      }
+    },
+    {
+      "id": "n-slack-p2",
+      "name": "Slack Alerte P2",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1860,
+        520
+      ],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "F0fwc1wXChlIz1fb",
+          "name": "NetroIA Error N8N"
+        }
+      },
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A8SHN845D",
+          "mode": "list",
+          "cachedResultName": "n8n-alerts"
+        },
+        "text": "=⚠️ [P2 IMPORTANT] {{ $json.workflow_name }}\nNoeud: {{ $json.last_node }}\nErreur: {{ $json.error_message }}\nCatégorie: {{ $json.categorie }}\n{{ $json.timestamp }}",
+        "otherOptions": {}
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extraire Contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraire Contexte": {
+      "main": [
+        [
+          {
+            "node": "Calculer Fingerprint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculer Fingerprint": {
+      "main": [
+        [
+          {
+            "node": "Lire Erreurs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Erreurs": {
+      "main": [
+        [
+          {
+            "node": "Detecter Doublon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detecter Doublon": {
+      "main": [
+        [
+          {
+            "node": "Est Doublon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Est Doublon": {
+      "main": [
+        [
+          {
+            "node": "Incrementer Occurrence",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Inserer Erreur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incrementer Occurrence": {
+      "main": [
+        [
+          {
+            "node": "Router Gravite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserer Erreur": {
+      "main": [
+        [
+          {
+            "node": "Router Gravite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Gravite": {
+      "main": [
+        [
+          {
+            "node": "Slack Alerte P1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Alerte P2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Alerte P1": {
+      "main": [
+        [
+          {
+            "node": "Gmail Alerte P1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "MCkTHxIspjJvwT5q"
+}

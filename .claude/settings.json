@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H 'X-N8N-API-KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZGE5OTU2NC05MWNmLTRlYjQtYjZkOC0wZDU2M2NhODFlNzQiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiY2YzNWZjNGUtZWU1Yy00Y2M5LWE1MDEtYjFmMmU3ODMyOTJmIiwiaWF0IjoxNzc1MzkwMDQ5fQ.Ae61Gjr8gsl_U7ElTWuEWT1JQldaOrK3uYvviTaKD4M' https://n8n.netroia.tech/api/v1/workflows/9T3KYNvJs6whJDJW)",
+      "Bash(node -e ':*)",
+      "Bash(node)",
+      "Bash(curl -s -H 'X-N8N-API-KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZGE5OTU2NC05MWNmLTRlYjQtYjZkOC0wZDU2M2NhODFlNzQiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiY2YzNWZjNGUtZWU1Yy00Y2M5LWE1MDEtYjFmMmU3ODMyOTJmIiwiaWF0IjoxNzc1MzkwMDQ5fQ.Ae61Gjr8gsl_U7ElTWuEWT1JQldaOrK3uYvviTaKD4M' https://n8n.netroia.tech/api/v1/workflows/pafFHP0oemMaFRMt)",
+      "Bash(node scripts/create-error-workflow-pro.js)",
+      "Bash(node -e \"require\\('dotenv'\\)\")",
+      "Bash(node scripts/activate-and-link-error-workflow.js)",
+      "Bash(node scripts/fix-error-workflow-nodes.js)",
+      "Bash(node scripts/list-workflows.js)",
+      "Bash(node scripts/diagnostic.js)",
+      "Bash(node scripts/inspect-active-workflow.js)",
+      "Bash(node scripts/fix-both-workflows.js)",
+      "Bash(node scripts/inspect-slack-nodes.js)",
+      "Bash(node scripts/recreate-error-workflow.js)",
+      "Bash(node scripts/fix-error-workflow-slack.js)",
+      "Bash(node -e ' *)",
+      "Bash(node scripts/fix-error-slack-v2.js)",
+      "Bash(curl -s -X POST https://n8n.netroia.tech/webhook/contact-netroia -H 'Content-Type: application/json' -d '{\"name\":\"Test Circuit Erreur\",\"email\":\"\",\"service\":\"avance\",\"message\":\"test circuit error workflow\",\"source\":\"netroia.tech\"}' --output /dev/null -w 'STATUS:%{http_code}')",
+      "Bash(node scripts/create-slack-channels.js)",
+      "Bash(node scripts/update-slack-channels-final.js)",
+      "Bash(node scripts/fix-slack-credential-type.js)",
+      "Bash(node scripts/fix-logger-sheets.js)",
+      "Bash(ssh-add -l)",
+      "Bash(ssh-add \"C:/Users/adrie/.ssh/id_ed25519\")",
+      "Bash(powershell -Command \"Get-Service ssh-agent | Select-Object Status, StartType\")",
+      "Bash(python3 -c \"import paramiko; print\\('paramiko OK'\\)\")",
+      "Bash(python3 -c ' *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Netroia\\Production-NetroIA\\Documentation-Projets\\netro-automations",
+      "C:\\Netroia"
+    ]
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "name": "Gestion des Erreurs (Le \"Safety Net\")",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f0e951f6-a305-4127-991b-c9d89ddc6fd9",
+      "name": "Error Trigger",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "aRZ1JedsE72lla1s",
+          "mode": "list",
+          "cachedResultName": "Erreur Interne N8N",
+          "cachedResultUrl": "/projects/OsRS0h04c8ZOrl4b/datatables/aRZ1JedsE72lla1s"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "workflow_name",
+              "displayName": "workflow_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "workflow_id",
+              "displayName": "workflow_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "execution_id",
+              "displayName": "execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_node",
+              "displayName": "last_node",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "error_message",
+              "displayName": "error_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        96
+      ],
+      "id": "a1f25e57-0ede-4315-9cf7-a69a50ee2158",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3335dcab-9d85-46fb-a1c4-c84913aefabd",
+              "name": "canal",
+              "value": "slack",
+              "type": "string"
+            },
+            {
+              "id": "212ddce3-f5aa-4bc0-a00c-3ef1347c9c15",
+              "name": "titre",
+              "value": "Erreur Interne N8N",
+              "type": "string"
+            },
+            {
+              "id": "6cb28022-f103-4f1b-8933-daf9dcffee24",
+              "name": "message",
+              "value": "=workflow_id: {{$json.workflow.id}},\n  workflow_name: {{$json.workflow.name}},\n  execution_id: {{$json.execution.id}},\n  error_message:{{$json.execution.error.message}},\n  stack: {{$json.execution.error.stack}},\n  last_node: {{$json.execution.lastNodeExecuted}},\n  mode: {{$json.execution.mode}},\n  timestamp: {{$now}}",
+              "type": "string"
+            },
+            {
+              "id": "2752ad64-0dda-4b28-a54c-64178bf1c6d9",
+              "name": "type",
+              "value": "erreur",
+              "type": "string"
+            },
+            {
+              "id": "05fd3880-9960-4eed-be79-9e01a63cd4ec",
+              "name": "Destinataire",
+              "value": "captain@netroia.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "375d99a3-8a11-48e8-aa88-672e0b7a18e6",
+      "name": "Préparer Donnée Erreur"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        208
+      ],
+      "id": "3839ea92-e02b-4542-a79e-56f714f3f3d8",
+      "name": "appeler autre workflow",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        96
+      ],
+      "id": "2fdec485-36e7-4e1a-b949-df970b1dd324",
+      "name": "Normaliser Données"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "150bed0f-fb16-4993-9240-30f7fa27d126"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        96
+      ],
+      "id": "90b9b996-5c2c-4c54-8f21-34a9c39eb113",
+      "name": "Choisir canal"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A8SHN845D",
+          "mode": "list",
+          "cachedResultName": "n8n-alerts"
+        },
+        "messageType": "block",
+        "blocksUi": "=[\n  {\n    \"type\": \"header\",\n    \"text\": {\n      \"type\": \"plain_text\",\n      \"text\": \"🚨 n8n – Erreur détectée\",\n      \"emoji\": true\n    }\n  },\n  {\n    \"type\": \"section\",\n    \"fields\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Workflow:*\\n{{$json.workflow?.name || 'inconnu'}}\"\n      },\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Node:*\\n{{$json.node?.name || 'inconnu'}}\"\n      }\n    ]\n  },\n  {\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": \"*Message d’erreur:*\\n```{{$json.error?.message || $json.message || 'Aucun message'}}```\"\n    }\n  },\n  {\n    \"type\": \"context\",\n    \"elements\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": \"🕒 {{$now}}\"\n      }\n    ]\n  },\n  {\n    \"type\": \"divider\"\n  }\n]",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1168,
+        240
+      ],
+      "id": "69ebeee3-709f-425d-8d2d-76325c59e20b",
+      "name": "Send a message slack",
+      "webhookId": "f26e9b83-f47c-4ca2-a941-a0adc32d5588",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "F0fwc1wXChlIz1fb",
+          "name": "NetroIA Error N8N"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1168,
+        -64
+      ],
+      "id": "1bc8af5b-7f24-4e86-926c-62ebd60e1a9c",
+      "name": "Send a message gmail",
+      "webhookId": "8a42d3b9-1dc1-4638-9e4e-1cafaa4c4c6a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qnyc8qWHv3LhocKw",
+          "name": "Captain"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Préparer Donnée Erreur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "Choisir canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Donnée Erreur": {
+      "main": [
+        [
+          {
+            "node": "Normaliser Données",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "appeler autre workflow": {
+      "main": [
+        [
+          {
+            "node": "Normaliser Données",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliser Données": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choisir canal": {
+      "main": [
+        [
+          {
+            "node": "Send a message gmail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ad208f65-0bf4-489e-92d0-bfa05bb2de57",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d1117b063e960848a7bce8e77a8fc680199da682ac55c2b42990e570883b3d0e"
+  },
+  "id": "cvQLlH5cho6uUB8hvWWR6",
+  "tags": []
+}

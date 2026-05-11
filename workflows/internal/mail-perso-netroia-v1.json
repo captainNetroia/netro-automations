@@ -1,0 +1,393 @@
+{
+  "name": "Mail Perso NetroIA",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📧 Mail Perso NetroIA\n\n**Objectif** : Surveiller captain@netroia.com, classifier les emails entrants avec l'IA et alerter sur les clients potentiels / emails importants.\n\n**Flux** :\nGmail (INBOX, non lus, toutes les 5 min)\n→ Extraction données email\n→ Classification IA (gpt-4.1-mini)\n→ Si CLIENT_POTENTIEL / CLIENT_EXISTANT / IMPORTANT → Alerte Slack\n→ Log DataTable (tous les emails)\n\n**Résultat** :\n- 🔴 CLIENT_POTENTIEL → Alerte #n8n-alerts\n- 🟠 CLIENT_EXISTANT → Alerte #n8n-alerts\n- 🟡 IMPORTANT → Alerte #n8n-alerts\n- ⚪ NEWSLETTER / COMMERCIAL / SPAM → Log uniquement\n\n**Error Workflow** : Debbug (Uc73W2jImd5arguG)"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 80],
+      "id": "sticky-vision-mail",
+      "name": "Vision"
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Setup avant activation\n\n1. **DataTable 'emails_log'** à créer :\n   - n8n → Tables → + New table → Nom: `emails_log`\n   - Colonnes : horodatage, sender_email, sender_name, subject, type_email, priorite, score_interet, resume, action_recommandee, email_id, thread_id\n   - Copier l'ID → coller dans le node 'Log Emails'\n\n2. **Credentials** déjà configurés :\n   - Gmail : Captain (Qnyc8qWHv3LhocKw)\n   - OpenAI : OpenAi account (g1I5vYXiH7nvxbYX)\n   - Slack : NetroIA Error N8N (F0fwc1wXChlIz1fb)\n\n3. **Activer** le workflow une fois la DataTable configurée"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [700, 80],
+      "id": "sticky-setup-mail",
+      "name": "Setup"
+    },
+    {
+      "parameters": {
+        "content": "## 📬 Gmail Trigger\nSurveille la boîte INBOX de captain@netroia.com toutes les 5 minutes.\nNe récupère que les emails non lus.\n`simple: false` = données email complètes (from, subject, textPlain, etc.)"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 440],
+      "id": "sticky-trigger-mail",
+      "name": "Sticky Gmail"
+    },
+    {
+      "parameters": {
+        "content": "## 🧹 Extraction\nExtrait les données clés de l'email et construit le prompt de classification pour l'IA.\nSorties : sender_name, sender_email, subject, snippet, date, email_id, thread_id, ai_context"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [460, 440],
+      "id": "sticky-extract-mail",
+      "name": "Sticky Extract"
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 Classification IA\nAgent IA avec Structured Output Parser.\nOutput accessible via `$json.output.type_email`, etc.\nTemperature 0 = classification déterministe."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [700, 440],
+      "id": "sticky-agent-mail",
+      "name": "Sticky Agent"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": ["INBOX"],
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [240, 620],
+      "id": "node-gmail-trigger-mail",
+      "name": "Watch Gmail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qnyc8qWHv3LhocKw",
+          "name": "Captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const email = $input.first().json;\n\n// Extraction expéditeur\nconst fromArr = email.from?.value || [];\nconst from = fromArr[0] || {};\nconst senderName = from.name || '';\nconst senderEmail = from.address || email.from?.text || '';\n\n// Extraction contenu\nconst subject = email.subject || '(Sans objet)';\nconst rawText = email.textPlain || email.snippet || '';\nconst snippet = rawText.slice(0, 600).replace(/\\n+/g, ' ').trim();\nconst dateMs = email.internalDate ? parseInt(email.internalDate) : Date.now();\nconst date = new Date(dateMs).toISOString();\nconst hasAttachment = (email.attachments || []).length > 0;\nconst emailId = email.id || '';\nconst threadId = email.threadId || '';\n\n// Prompt pour l'IA\nconst aiContext = `Tu es un assistant de tri d'emails pour captain@netroia.com.\nNetroIA est une agence spécialisée en automatisation n8n et systèmes IA agentiques B2B.\n\nAnalyse cet email et retourne une classification JSON.\n\nExpéditeur : ${senderName} <${senderEmail}>\nObjet : ${subject}\nContenu (extrait) : ${snippet}\nDate : ${date}\nPièces jointes : ${hasAttachment ? 'Oui' : 'Non'}\n\nTypes de classification disponibles :\n- CLIENT_POTENTIEL : prospect cherchant un devis, une démo, un partenariat, ou exprimant un besoin d'automatisation/IA\n- CLIENT_EXISTANT : client actuel avec une demande, question ou mise à jour de projet\n- IMPORTANT : email professionnel nécessitant une réponse (partenariat stratégique, presse, admin, juridique, facture urgente)\n- NEWSLETTER : newsletter, update produit, contenu éditorial sur abonnement\n- COMMERCIAL : cold email, prospection commerciale non sollicitée, publicité\n- SPAM : spam, phishing, non pertinent`;\n\nreturn [{\n  json: {\n    sender_name: senderName,\n    sender_email: senderEmail,\n    subject,\n    snippet,\n    date,\n    has_attachment: hasAttachment,\n    email_id: emailId,\n    thread_id: threadId,\n    ai_context: aiContext\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 620],
+      "id": "node-extract-mail",
+      "name": "Extraire Email"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [700, 800],
+      "id": "node-llm-mail",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"type_email\": {\n      \"type\": \"string\",\n      \"enum\": [\"CLIENT_POTENTIEL\", \"CLIENT_EXISTANT\", \"IMPORTANT\", \"NEWSLETTER\", \"COMMERCIAL\", \"SPAM\"],\n      \"description\": \"Classification du type d'email\"\n    },\n    \"priorite\": {\n      \"type\": \"string\",\n      \"enum\": [\"HAUTE\", \"MOYENNE\", \"BASSE\"],\n      \"description\": \"Niveau de priorité de traitement\"\n    },\n    \"resume\": {\n      \"type\": \"string\",\n      \"description\": \"Résumé de l'email en 1-2 phrases maximum\"\n    },\n    \"action_recommandee\": {\n      \"type\": \"string\",\n      \"description\": \"Action recommandée parmi : Répondre rapidement / Répondre / Ignorer / Archiver / Transférer\"\n    },\n    \"score_interet\": {\n      \"type\": \"integer\",\n      \"minimum\": 0,\n      \"maximum\": 10,\n      \"description\": \"Score d'intérêt commercial de 0 (nul) à 10 (critique)\"\n    }\n  },\n  \"required\": [\"type_email\", \"priorite\", \"resume\", \"action_recommandee\", \"score_interet\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [900, 800],
+      "id": "node-parser-mail",
+      "name": "Schema Classification"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_context }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Tu es un assistant de tri d'emails professionnel. Tu dois produire UNIQUEMENT un JSON valide (aucun texte autour, aucun Markdown).\n\nRègles strictes :\n- Respecte exactement les clés et valeurs du schéma fourni\n- type_email doit être l'une des valeurs exactes de l'enum\n- score_interet : 0-10 (10 = client prêt à signer, 0 = spam total)\n- resume : 1-2 phrases maximum, factuel\n- action_recommandee : une des options prédéfinies\n- Ne retourne que le JSON brut, sans aucun habillage",
+          "returnIntermediateSteps": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [700, 620],
+      "id": "node-agent-mail",
+      "name": "Classifier Email",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mail-set-01",
+              "name": "type_email",
+              "value": "={{ $json.output.type_email }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-02",
+              "name": "priorite",
+              "value": "={{ $json.output.priorite }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-03",
+              "name": "resume",
+              "value": "={{ $json.output.resume }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-04",
+              "name": "action_recommandee",
+              "value": "={{ $json.output.action_recommandee }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-05",
+              "name": "score_interet",
+              "value": "={{ $json.output.score_interet }}",
+              "type": "number"
+            },
+            {
+              "id": "mail-set-06",
+              "name": "sender_name",
+              "value": "={{ $('Extraire Email').first().json.sender_name }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-07",
+              "name": "sender_email",
+              "value": "={{ $('Extraire Email').first().json.sender_email }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-08",
+              "name": "subject",
+              "value": "={{ $('Extraire Email').first().json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-09",
+              "name": "thread_id",
+              "value": "={{ $('Extraire Email').first().json.thread_id }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-10",
+              "name": "email_id",
+              "value": "={{ $('Extraire Email').first().json.email_id }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-11",
+              "name": "date",
+              "value": "={{ $('Extraire Email').first().json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "mail-set-12",
+              "name": "horodatage_traitement",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [940, 620],
+      "id": "node-set-mail",
+      "name": "Préparer Résultat"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "mail-if-cond-1",
+              "leftValue": "={{ $json.type_email }}",
+              "rightValue": "CLIENT_POTENTIEL|CLIENT_EXISTANT|IMPORTANT",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1160, 620],
+      "id": "node-if-mail",
+      "name": "Email Important?"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A8SHN845D",
+          "mode": "list",
+          "cachedResultName": "n8n-alerts"
+        },
+        "messageType": "block",
+        "blocksUi": "=[\n  {\n    \"type\": \"header\",\n    \"text\": {\n      \"type\": \"plain_text\",\n      \"text\": \"{{ $json.type_email === 'CLIENT_POTENTIEL' ? '🔴 CLIENT POTENTIEL' : $json.type_email === 'CLIENT_EXISTANT' ? '🟠 CLIENT EXISTANT' : '🟡 EMAIL IMPORTANT' }}\",\n      \"emoji\": true\n    }\n  },\n  {\n    \"type\": \"section\",\n    \"fields\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*De :*\\n{{ $json.sender_name || 'Inconnu' }} <{{ $json.sender_email }}>\"\n      },\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Priorité :*\\n{{ $json.priorite }}  |  Score : {{ $json.score_interet }}/10\"\n      }\n    ]\n  },\n  {\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": \"*Objet :* {{ $json.subject }}\"\n    }\n  },\n  {\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": \"*Résumé :*\\n{{ $json.resume }}\"\n    }\n  },\n  {\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": \"*Action recommandée :* {{ $json.action_recommandee }}\"\n    }\n  },\n  {\n    \"type\": \"actions\",\n    \"elements\": [\n      {\n        \"type\": \"button\",\n        \"text\": { \"type\": \"plain_text\", \"text\": \"Ouvrir dans Gmail\", \"emoji\": true },\n        \"url\": \"https://mail.google.com/mail/u/0/#inbox/{{ $json.thread_id }}\",\n        \"style\": \"primary\"\n      }\n    ]\n  },\n  {\n    \"type\": \"context\",\n    \"elements\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": \"🕒 {{ $json.horodatage_traitement }}\"\n      }\n    ]\n  }\n]",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [1380, 500],
+      "id": "node-slack-mail",
+      "name": "Alerte Slack",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "F0fwc1wXChlIz1fb",
+          "name": "NetroIA Error N8N"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "PC2gkxJrVnATKZTl",
+          "mode": "list",
+          "cachedResultName": "emails_log",
+          "cachedResultUrl": "/datatables/PC2gkxJrVnATKZTl"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "horodatage": "={{ $json.horodatage_traitement }}",
+            "sender_email": "={{ $json.sender_email }}",
+            "sender_name": "={{ $json.sender_name }}",
+            "subject": "={{ $json.subject }}",
+            "type_email": "={{ $json.type_email }}",
+            "priorite": "={{ $json.priorite }}",
+            "score_interet": "={{ $json.score_interet }}",
+            "resume": "={{ $json.resume }}",
+            "action_recommandee": "={{ $json.action_recommandee }}",
+            "email_id": "={{ $json.email_id }}",
+            "thread_id": "={{ $json.thread_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "horodatage", "displayName": "horodatage", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "sender_email", "displayName": "sender_email", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "sender_name", "displayName": "sender_name", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "subject", "displayName": "subject", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "type_email", "displayName": "type_email", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "priorite", "displayName": "priorite", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "score_interet", "displayName": "score_interet", "required": false, "defaultMatch": false, "display": true, "type": "number", "readOnly": false, "removed": false },
+            { "id": "resume", "displayName": "resume", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "action_recommandee", "displayName": "action_recommandee", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "email_id", "displayName": "email_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "thread_id", "displayName": "thread_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [1600, 620],
+      "id": "node-datatable-mail",
+      "name": "Log Emails"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Watch Gmail": {
+      "main": [
+        [{ "node": "Extraire Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extraire Email": {
+      "main": [
+        [{ "node": "Classifier Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "Classifier Email", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Schema Classification": {
+      "ai_outputParser": [
+        [{ "node": "Classifier Email", "type": "ai_outputParser", "index": 0 }]
+      ]
+    },
+    "Classifier Email": {
+      "main": [
+        [{ "node": "Préparer Résultat", "type": "main", "index": 0 }]
+      ]
+    },
+    "Préparer Résultat": {
+      "main": [
+        [{ "node": "Email Important?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Email Important?": {
+      "main": [
+        [{ "node": "Alerte Slack", "type": "main", "index": 0 }],
+        [{ "node": "Log Emails", "type": "main", "index": 0 }]
+      ]
+    },
+    "Alerte Slack": {
+      "main": [
+        [{ "node": "Log Emails", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "Uc73W2jImd5arguG",
+    "availableInMCP": false
+  },
+  "versionId": "mail-perso-netroia-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "d1117b063e960848a7bce8e77a8fc680199da682ac55c2b42990e570883b3d0e"
+  },
+  "tags": []
+}

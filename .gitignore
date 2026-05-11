@@ -1,0 +1,21 @@
+# Secrets et credentials
+*.env
+.env.*
+credentials.json
+*secret*
+*_private*
+*_credentials*
+
+# Données clients (PII)
+clients/*/data/
+*_leads_export*
+*_client_data*
+
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs
+.vscode/settings.json
+*.tmp

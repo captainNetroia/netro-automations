@@ -1,0 +1,302 @@
+{
+  "updatedAt": "2026-01-22T22:40:56.398Z",
+  "createdAt": "2026-01-17T14:26:20.103Z",
+  "id": "pafFHP0oemMaFRMt",
+  "name": "Gestion des Erreurs (Le \"Safety Net\")",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        112
+      ],
+      "id": "d32a3ceb-9473-415d-9b80-cbad0810bde3",
+      "name": "Error Trigger",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3335dcab-9d85-46fb-a1c4-c84913aefabd",
+              "name": "canal",
+              "value": "slack",
+              "type": "string"
+            },
+            {
+              "id": "212ddce3-f5aa-4bc0-a00c-3ef1347c9c15",
+              "name": "titre",
+              "value": "Erreur Interne N8N",
+              "type": "string"
+            },
+            {
+              "id": "6cb28022-f103-4f1b-8933-daf9dcffee24",
+              "name": "message",
+              "value": "=workflow_id: {{$json.workflow.id}},\n  workflow_name: {{$json.workflow.name}},\n  execution_id: {{$json.execution.id}},\n  error_message:{{$json.execution.error.message}},\n  stack: {{$json.execution.error.stack}},\n  last_node: {{$json.execution.lastNodeExecuted}},\n  mode: {{$json.execution.mode}},\n  timestamp: {{$now}}",
+              "type": "string"
+            },
+            {
+              "id": "2752ad64-0dda-4b28-a54c-64178bf1c6d9",
+              "name": "type",
+              "value": "erreur",
+              "type": "string"
+            },
+            {
+              "id": "05fd3880-9960-4eed-be79-9e01a63cd4ec",
+              "name": "Destinataire",
+              "value": "captain@netroia.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1488,
+        112
+      ],
+      "id": "603343a5-81af-498e-a4b4-5e354281f9b0",
+      "name": "Préparer Donnée Erreur"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1584,
+        336
+      ],
+      "id": "7a8db549-9cf9-41ee-8d3e-b2f343b74e97",
+      "name": "appeler autre workflow",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1248,
+        192
+      ],
+      "id": "ce841530-ddba-46e3-b813-d530726b0d4d",
+      "name": "Normaliser Données"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        96
+      ],
+      "id": "0644609c-1497-4b82-87df-1af5702a2781",
+      "name": "Insert row1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "691af15f-0188-447f-8a2f-6eb23caff17a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -864,
+        96
+      ],
+      "id": "2cf5550c-686f-4a4a-9bad-8b2d19ad3ff8",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -688,
+        -48
+      ],
+      "id": "5e0ded28-b153-4438-a565-fa605caef657",
+      "name": "Send a message",
+      "webhookId": "49012539-952f-4b6d-8a40-8319029b4934",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Bayzmr9ePmWdToL",
+          "name": "captain"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -624,
+        272
+      ],
+      "id": "573ade34-dfc3-4693-9bea-872d7fa88e6d",
+      "name": "Send a message1",
+      "webhookId": "a61ee8d4-7a3d-493e-a6d1-9f75cc205146",
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Préparer Donnée Erreur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Donnée Erreur": {
+      "main": [
+        [
+          {
+            "node": "Normaliser Données",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "appeler autre workflow": {
+      "main": [
+        [
+          {
+            "node": "Normaliser Données",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliser Données": {
+      "main": [
+        [
+          {
+            "node": "Insert row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "b9b4f547-06bf-4c83-9862-e7604a798c29",
+  "activeVersionId": null,
+  "versionCounter": 13,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-01-17T14:26:20.112Z",
+      "createdAt": "2026-01-17T14:26:20.112Z",
+      "role": "workflow:owner",
+      "workflowId": "pafFHP0oemMaFRMt",
+      "projectId": "PbQPbiFCKKgohLe5",
+      "project": {
+        "updatedAt": "2026-01-16T23:03:28.060Z",
+        "createdAt": "2026-01-16T23:02:53.670Z",
+        "id": "PbQPbiFCKKgohLe5",
+        "name": "Neo IA <captain@netroia.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "7da99564-91cf-4eb4-b6d8-0d563ca81e74"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

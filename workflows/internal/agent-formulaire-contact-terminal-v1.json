@@ -1,0 +1,1803 @@
+{
+  "updatedAt": "2026-05-07T12:16:20.052Z",
+  "createdAt": "2026-05-07T10:53:30.756Z",
+  "id": "Icz9Mh20mWcZHHQy",
+  "name": "NetroIA - Agent formulaire contact Terminal IA",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## NetroIA - Agent formulaire contact Terminal IA\n\nENTREES :\n  POST /webhook/terminal-agent  → { user_input, session_id }\n  POST /webhook/contact-netroia → { name, email, service, message, source, date }\n\nPIPELINE COMMUN (apres normalisation) :\n  Classifier IA (gpt-4.1-mini) → score_lead, urgence, type_besoin, budget_estime\n  IF prospect qualifie (score >= 5 OU formulaire) :\n    → IF email disponible → Generer email HTML → Envoyer prospect\n    → Logger Sheets → Alerte Slack → Reponse\n\nCORS : N8N_CORS_ALLOWED_ORIGINS=https://netroia.tech sur le VPS.\nClaude 3.5 Sonnet : voir NOTE CLAUDE en tete du script.",
+        "height": 240,
+        "width": 900,
+        "color": 5
+      },
+      "id": "sticky-archi",
+      "name": "Note Architecture",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Branche Terminal\n/webhook/terminal-agent\n{ user_input, session_id }\n\nAgent IA : gpt-4o, T=0.7\nRetourne reponse conversationnelle.",
+        "height": 180,
+        "width": 320,
+        "color": 6
+      },
+      "id": "sticky-b1",
+      "name": "Note Branche Terminal",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Branche Formulaire Contact\n/webhook/contact-netroia\n{ name, email, service, message }\n\nValidation stricte (nom, email, message >= 10 car.)\nToujours qualifie (source=form).",
+        "height": 180,
+        "width": 320,
+        "color": 3
+      },
+      "id": "sticky-b2",
+      "name": "Note Branche Formulaire",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pipeline CRM commun\n\nClassifier : gpt-4.1-mini | T=0\nChamps : urgence / type_besoin / budget_estime\n         resume_besoins / actions_suggerees / score_lead\n\nPack labels : Starter / Avance / Sur Mesure / Personnalise\n\nEmail : gpt-4.1 | T=0.7 | HTML complet | BCC captain\nSheets ID : 1MfPCOMGtLsEuOq4AdyE...\nSlack : C0A8SHN845D (#n8n-alerts — TODO #prospects)",
+        "height": 240,
+        "width": 580,
+        "color": 4
+      },
+      "id": "sticky-crm",
+      "name": "Note Pipeline CRM",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "terminal-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-terminal",
+      "name": "Webhook Terminal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        608
+      ],
+      "webhookId": "3161e934-f69d-4221-9f21-465dd51664df"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "contact-netroia",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-contact",
+      "name": "Webhook Contact",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        976
+      ],
+      "webhookId": "aa677c32-52f7-422b-ab39-bd575baa4c79"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst user_input = (body.user_input || '').trim();\nconst session_id = (body.session_id || ('anon-' + Date.now())).trim();\nif (!user_input || user_input.length < 1) throw new Error('user_input vide');\nif (user_input.length > 2000) throw new Error('user_input trop long');\nreturn [{ json: { user_input, session_id, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "valider-terminal",
+      "name": "Valider Terminal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst name    = (body.name    || '').trim();\nconst email   = (body.email   || '').trim().toLowerCase();\nconst service = (body.service || 'autre').trim();\nconst message = (body.message || '').trim();\nconst date    = body.date   || new Date().toISOString();\nconst source  = body.source || 'netroia.tech';\nif (!name    || name.length    < 2)   throw new Error('Champ name invalide');\nif (!email   || !email.includes('@')) throw new Error('Champ email invalide');\nif (!message || message.length < 10)  throw new Error('Message trop court');\nreturn [{ json: {\n  source_type : 'form',\n  user_input  : message,\n  ai_response : null,\n  session_id  : null,\n  name, email, service, date,\n  timestamp   : new Date().toISOString(),\n  has_email   : true,\n} }];"
+      },
+      "id": "valider-contact",
+      "name": "Valider Contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_input }}",
+        "options": {
+          "systemMessage": "Tu es l'Agent d'analyse NetroIA, assistant commercial IA specialise en automatisation pour PME.\nTu incarnes NetroIA (agence automatisation IA B2B, Nantes, France — fondateur Jordan Vincent).\n\nROLE : Qualifier les besoins du visiteur en automatisation et IA.\n- Poser des questions pertinentes pour comprendre le processus metier.\n- Proposer des solutions concretes issues de l'offre NetroIA.\n- Guider vers un audit express ou un rendez-vous decouverte 30 min.\n\nOFFRES NETROIA :\n- Pack Starter (500-1000 EUR) : automatisation simple, agent IA de base\n- Pack Avance (1200-2500 EUR) : workflows complexes, integrations multi-outils\n- Pack Sur Mesure (5000-10000 EUR) : systeme agentique complet, architecture IA\n- Pack Personnalise (sur devis) : automatisation + IA + webdesign combines\n\nREGLES :\n1. Reponses courtes (2 a 4 phrases max) adaptees a un terminal de chat.\n2. Toujours terminer par une question de qualification.\n3. Si audit, coordonnees, rendez-vous ou devis mentionne : confirmer et encourager.\n4. Ton : professionnel, direct, expert mais accessible.\n5. Langue : francais systematiquement.\n6. Ne jamais inventer de chiffres ou clients — rester factuel sur l'offre.",
+          "returnIntermediateSteps": false
+        }
+      },
+      "id": "agent-ia",
+      "name": "Agent IA Terminal",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        656,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "openai-conv",
+      "name": "OpenAI Conversation",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        800
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const validData = $('Valider Terminal').first().json;\nreturn [{ json: {\n  source_type : 'terminal',\n  user_input  : validData.user_input,\n  ai_response : $json.output || '',\n  session_id  : validData.session_id,\n  name        : null,\n  email       : null,\n  service     : null,\n  date        : validData.timestamp,\n  timestamp   : validData.timestamp,\n  has_email   : false,\n} }];"
+      },
+      "id": "preparer-terminal",
+      "name": "Preparer Terminal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $input.item.json }];"
+      },
+      "id": "donnees-source",
+      "name": "Donnees Source",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyse ce message prospect et retourne le JSON de classification.\n\nSOURCE : {{ $json.source_type }}\nNOM : {{ $json.name || 'Visiteur terminal' }}\nEMAIL : {{ $json.email || 'Non communique' }}\nSERVICE : {{ $json.service || 'Non specifie' }}\nMESSAGE : {{ $json.user_input }}\n\nOFFRES NETROIA :\n- starter (500-1000 EUR) : Automatisation simple ou agent IA de base\n- avance (1200-2500 EUR) : Workflows complexes, integrations multi-outils\n- sur_mesure (5000-10000 EUR) : Systeme agentique complet, architecture IA\n- personnalise (sur devis) : Automatisation + Agent IA + Webdesign combines\n\nRetourne UNIQUEMENT le JSON valide selon le schema fourni.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Tu es un expert commercial IA B2B. Tu analyses les messages prospects de NetroIA (agence automatisation IA, Nantes, France). Temperature=0 : tes reponses sont deterministes. Tu retournes UNIQUEMENT du JSON valide selon le schema fourni, aucun texte autour.",
+          "returnIntermediateSteps": false
+        }
+      },
+      "id": "classifier-node",
+      "name": "Classifier Demande",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1424,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "openai-mini",
+      "name": "OpenAI Classification",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        912
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"urgence\":{\"type\":\"string\",\"enum\":[\"haute\",\"normale\",\"basse\"],\"description\":\"Niveau d'urgence de la demande\"},\"type_besoin\":{\"type\":\"string\",\"enum\":[\"automatisation\",\"agent_ia\",\"site_web\",\"combine\",\"autre\"],\"description\":\"Type de besoin principal detecte\"},\"budget_estime\":{\"type\":\"string\",\"enum\":[\"starter\",\"avance\",\"sur_mesure\",\"personnalise\"],\"description\":\"Pack NetroIA correspondant au budget estime\"},\"resume_besoins\":{\"type\":\"string\",\"description\":\"Resume du besoin en 2-3 phrases maximum\"},\"actions_suggerees\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"3 actions concretes prioritaires pour Jordan\"},\"score_lead\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":10,\"description\":\"Score de qualite du lead (1=froid, 10=pret a signer)\"}},\"required\":[\"urgence\",\"type_besoin\",\"budget_estime\",\"resume_besoins\",\"actions_suggerees\",\"score_lead\"]}"
+      },
+      "id": "schema-classif",
+      "name": "Schema Classification",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base   = $('Donnees Source').first().json;\nconst classif = $json.output || {};\nconst packLabels = {\n  starter      : 'Pack Starter (500 - 1 000 EUR)',\n  avance       : 'Pack Avance (1 200 - 2 500 EUR)',\n  sur_mesure   : 'Pack Sur Mesure (5 000 - 10 000 EUR)',\n  personnalise : 'Pack Personnalise (sur devis)',\n};\nreturn [{ json: {\n  ...base,\n  urgence           : classif.urgence           || 'normale',\n  type_besoin       : classif.type_besoin       || 'autre',\n  budget_estime     : classif.budget_estime     || 'starter',\n  resume_besoins    : classif.resume_besoins    || '',\n  actions_suggerees : (classif.actions_suggerees || []).join(' | '),\n  score_lead        : classif.score_lead        || 1,\n  pack_label        : packLabels[classif.budget_estime] || classif.budget_estime || '',\n  horodatage        : new Date().toISOString(),\n  has_email         : !!(base.email && base.email.trim()),\n} }];"
+      },
+      "id": "preparer-enrichi",
+      "name": "Preparer Enrichi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "cond-score",
+              "leftValue": "={{ $json.score_lead }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gte",
+                "name": "filter.operator.gte"
+              }
+            },
+            {
+              "id": "cond-form",
+              "leftValue": "={{ $json.source_type }}",
+              "rightValue": "form",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "if-prospect",
+      "name": "IF Prospect Qualifie",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-email",
+              "leftValue": "={{ $json.has_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "name": "filter.operator.true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "if-email",
+      "name": "IF Email Disponible",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Redige un email de reponse professionnel et personnalise pour ce prospect NetroIA.\n\nPROSPECT :\nPrenom       : {{ $json.name.split(' ')[0] }}\nNom complet  : {{ $json.name }}\nEmail        : {{ $json.email }}\nService      : {{ $json.service }}\nMessage      : {{ $json.user_input }}\n\nANALYSE IA :\nType besoin  : {{ $json.type_besoin }}\nBudget estime: {{ $json.budget_estime }}\nUrgence      : {{ $json.urgence }}\nScore lead   : {{ $json.score_lead }}/10\nResume       : {{ $json.resume_besoins }}\n\nOFFRES NETROIA :\n- Starter (500-1000 EUR) : Automatisation simple ou agent IA de base\n- Avance (1200-2500 EUR) : Workflows complexes, integrations multi-outils\n- Sur mesure (5000-10000 EUR) : Systeme agentique complet, architecture IA\n- Personnalise (sur devis) : Automatisation + Agent IA + Webdesign\n\nINSTRUCTIONS :\nRedige un email HTML (pas Markdown) avec :\n1. Accroche personnalisee (prenom + type besoin detecte)\n2. Confirmation reception + delai reponse 24h\n3. 3 questions de qualification pertinentes\n4. Presentation courte de l'offre correspondante ({{ $json.budget_estime }})\n5. CTA : reserver un appel decouverte 30 min\n6. Signature : Jordan Vincent | Fondateur NetroIA | captain@netroia.com\n\nTon : professionnel, direct, axe resultats. Pas de jargon technique.\nLangue : francais. Format : HTML complet.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Tu es Jordan Vincent, fondateur de NetroIA (agence automatisation IA B2B, Nantes). Tu rediges des emails de reponse prospect chaleureux, professionnels et axes resultats. Tu retournes UNIQUEMENT du JSON valide selon le schema fourni.",
+          "returnIntermediateSteps": false
+        }
+      },
+      "id": "generer-email",
+      "name": "Generer Email",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2384,
+        464
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "openai-email",
+      "name": "OpenAI Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2304,
+        672
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"email_subject\":{\"type\":\"string\",\"description\":\"Objet de l'email, accrocheur et personnalise\"},\"email_body_html\":{\"type\":\"string\",\"description\":\"Corps de l'email en HTML complet\"}},\"required\":[\"email_subject\",\"email_body_html\"]}"
+      },
+      "id": "schema-email",
+      "name": "Schema Email",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2512,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Preparer Enrichi').first().json.email }}",
+        "subject": "={{ $json.output.email_subject || 'Votre demande NetroIA - ' + $('Preparer Enrichi').first().json.name }}",
+        "message": "={{ $json.output.email_body_html || '<p>Merci pour votre message. Nous vous contactons sous 24h.</p>' }}",
+        "options": {
+          "bccList": "captain@netroia.com",
+          "senderName": "NetroIA"
+        }
+      },
+      "id": "envoyer-email",
+      "name": "Envoyer Email Prospect",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2624,
+        464
+      ],
+      "webhookId": "4b793094-86ae-4b69-8fd6-dc40bedd31ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Bayzmr9ePmWdToL",
+          "name": "captain"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1MfPCOMGtLsEuOq4AdyE93FTOb58hEthntAHULFLXeKE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Feuille 1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $('Preparer Enrichi').first().json.date }}",
+            "name": "={{ $('Preparer Enrichi').first().json.name || 'Terminal - ' + $('Preparer Enrichi').first().json.session_id }}",
+            "email": "={{ $('Preparer Enrichi').first().json.email || 'N/A' }}",
+            "service": "={{ $('Preparer Enrichi').first().json.service || $('Preparer Enrichi').first().json.source_type }}",
+            "type_besoin": "={{ $('Preparer Enrichi').first().json.type_besoin }}",
+            "budget_estime": "={{ $('Preparer Enrichi').first().json.budget_estime }}",
+            "urgence": "={{ $('Preparer Enrichi').first().json.urgence }}",
+            "score_lead": "={{ $('Preparer Enrichi').first().json.score_lead }}",
+            "resume_besoins": "={{ $('Preparer Enrichi').first().json.resume_besoins }}",
+            "horodatage": "={{ $('Preparer Enrichi').first().json.horodatage }}"
+          },
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "service",
+              "displayName": "service",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "type_besoin",
+              "displayName": "type_besoin",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "budget_estime",
+              "displayName": "budget_estime",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "urgence",
+              "displayName": "urgence",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "score_lead",
+              "displayName": "score_lead",
+              "required": false,
+              "defaultMatch": false,
+              "type": "number"
+            },
+            {
+              "id": "resume_besoins",
+              "displayName": "resume_besoins",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "horodatage",
+              "displayName": "horodatage",
+              "required": false,
+              "defaultMatch": false,
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "logger-sheets",
+      "name": "Logger Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        2864,
+        592
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "96DyhZeedQou7Yho",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A8SHN845D",
+          "mode": "list",
+          "cachedResultName": "n8n-alerts"
+        },
+        "messageType": "block",
+        "blocksUi": "[{\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"={{ $('Preparer Enrichi').first().json.source_type === 'form' ? 'NOUVEAU PROSPECT (formulaire)' : 'LEAD TERMINAL IA' }} — NetroIA\",\"emoji\":true}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Contact :*\\n={{ $('Preparer Enrichi').first().json.name || 'Visiteur terminal - ' + $('Preparer Enrichi').first().json.session_id }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Email :*\\n={{ $('Preparer Enrichi').first().json.email || 'Non communique' }}\"}]},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Score Lead :*\\n={{ $('Preparer Enrichi').first().json.score_lead }}/10 | {{ $('Preparer Enrichi').first().json.urgence }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Pack estime :*\\n={{ $('Preparer Enrichi').first().json.pack_label }}\"}]},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Besoin :*\\n={{ $('Preparer Enrichi').first().json.type_besoin }} | {{ $('Preparer Enrichi').first().json.resume_besoins }}\"}},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Message :*\\n={{ $('Preparer Enrichi').first().json.user_input }}\"}},{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"={{ $('Preparer Enrichi').first().json.source_type }} | {{ $('Preparer Enrichi').first().json.horodatage }}\"}]}]",
+        "otherOptions": {}
+      },
+      "id": "alerte-slack",
+      "name": "Alerte Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        3104,
+        592
+      ],
+      "webhookId": "9cab0c34-3de0-4a4d-bf1d-b1ce5e096f51",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "HQ7TA73vHn5QPIQs",
+          "name": "Slack account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify(  $('Preparer Enrichi').first().json.source_type === 'terminal'    ? { response: $('Preparer Enrichi').first().json.ai_response || 'Votre demande a bien ete enregistree.', session_id: $('Preparer Enrichi').first().json.session_id }    : { success: true, message: 'Message recu. Nous vous repondons dans les 24h.' }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://netroia.tech"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "reponse-finale",
+      "name": "Reponse Finale",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3344,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({  response: $('Preparer Enrichi').first().json.ai_response || '',  session_id: $('Preparer Enrichi').first().json.session_id}) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://netroia.tech"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "reponse-direct",
+      "name": "Reponse Directe",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2144,
+        864
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Terminal": {
+      "main": [
+        [
+          {
+            "node": "Valider Terminal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider Terminal": {
+      "main": [
+        [
+          {
+            "node": "Agent IA Terminal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent IA Terminal": {
+      "main": [
+        [
+          {
+            "node": "Preparer Terminal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparer Terminal": {
+      "main": [
+        [
+          {
+            "node": "Donnees Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Contact": {
+      "main": [
+        [
+          {
+            "node": "Valider Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider Contact": {
+      "main": [
+        [
+          {
+            "node": "Donnees Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Donnees Source": {
+      "main": [
+        [
+          {
+            "node": "Classifier Demande",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classifier Demande": {
+      "main": [
+        [
+          {
+            "node": "Preparer Enrichi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparer Enrichi": {
+      "main": [
+        [
+          {
+            "node": "IF Prospect Qualifie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Prospect Qualifie": {
+      "main": [
+        [
+          {
+            "node": "IF Email Disponible",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reponse Directe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Email Disponible": {
+      "main": [
+        [
+          {
+            "node": "Generer Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Logger Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generer Email": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Email Prospect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer Email Prospect": {
+      "main": [
+        [
+          {
+            "node": "Logger Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logger Sheets": {
+      "main": [
+        [
+          {
+            "node": "Alerte Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerte Slack": {
+      "main": [
+        [
+          {
+            "node": "Reponse Finale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Conversation": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent IA Terminal",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Classification": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classifier Demande",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Classification": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classifier Demande",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Email": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generer Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Email": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generer Email",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "pafFHP0oemMaFRMt",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "3bc65e79-9339-4a1b-868e-eb1d62a1abb2",
+  "activeVersionId": "3bc65e79-9339-4a1b-868e-eb1d62a1abb2",
+  "versionCounter": 11,
+  "triggerCount": 2,
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-05-07T12:16:20.054Z",
+    "createdAt": "2026-05-07T12:16:20.054Z",
+    "versionId": "3bc65e79-9339-4a1b-868e-eb1d62a1abb2",
+    "workflowId": "Icz9Mh20mWcZHHQy",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## NetroIA - Agent formulaire contact Terminal IA\n\nENTREES :\n  POST /webhook/terminal-agent  → { user_input, session_id }\n  POST /webhook/contact-netroia → { name, email, service, message, source, date }\n\nPIPELINE COMMUN (apres normalisation) :\n  Classifier IA (gpt-4.1-mini) → score_lead, urgence, type_besoin, budget_estime\n  IF prospect qualifie (score >= 5 OU formulaire) :\n    → IF email disponible → Generer email HTML → Envoyer prospect\n    → Logger Sheets → Alerte Slack → Reponse\n\nCORS : N8N_CORS_ALLOWED_ORIGINS=https://netroia.tech sur le VPS.\nClaude 3.5 Sonnet : voir NOTE CLAUDE en tete du script.",
+          "height": 240,
+          "width": 900,
+          "color": 5
+        },
+        "id": "sticky-archi",
+        "name": "Note Architecture",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          208,
+          48
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Branche Terminal\n/webhook/terminal-agent\n{ user_input, session_id }\n\nAgent IA : gpt-4o, T=0.7\nRetourne reponse conversationnelle.",
+          "height": 180,
+          "width": 320,
+          "color": 6
+        },
+        "id": "sticky-b1",
+        "name": "Note Branche Terminal",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          208,
+          384
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Branche Formulaire Contact\n/webhook/contact-netroia\n{ name, email, service, message }\n\nValidation stricte (nom, email, message >= 10 car.)\nToujours qualifie (source=form).",
+          "height": 180,
+          "width": 320,
+          "color": 3
+        },
+        "id": "sticky-b2",
+        "name": "Note Branche Formulaire",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          704,
+          368
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Pipeline CRM commun\n\nClassifier : gpt-4.1-mini | T=0\nChamps : urgence / type_besoin / budget_estime\n         resume_besoins / actions_suggerees / score_lead\n\nPack labels : Starter / Avance / Sur Mesure / Personnalise\n\nEmail : gpt-4.1 | T=0.7 | HTML complet | BCC captain\nSheets ID : 1MfPCOMGtLsEuOq4AdyE...\nSlack : C0A8SHN845D (#n8n-alerts — TODO #prospects)",
+          "height": 240,
+          "width": 580,
+          "color": 4
+        },
+        "id": "sticky-crm",
+        "name": "Note Pipeline CRM",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1200,
+          48
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "terminal-agent",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "webhook-terminal",
+        "name": "Webhook Terminal",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          608
+        ],
+        "webhookId": "3161e934-f69d-4221-9f21-465dd51664df"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "contact-netroia",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "webhook-contact",
+        "name": "Webhook Contact",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          240,
+          976
+        ],
+        "webhookId": "aa677c32-52f7-422b-ab39-bd575baa4c79"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst user_input = (body.user_input || '').trim();\nconst session_id = (body.session_id || ('anon-' + Date.now())).trim();\nif (!user_input || user_input.length < 1) throw new Error('user_input vide');\nif (user_input.length > 2000) throw new Error('user_input trop long');\nreturn [{ json: { user_input, session_id, timestamp: new Date().toISOString() } }];"
+        },
+        "id": "valider-terminal",
+        "name": "Valider Terminal",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          608
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst name    = (body.name    || '').trim();\nconst email   = (body.email   || '').trim().toLowerCase();\nconst service = (body.service || 'autre').trim();\nconst message = (body.message || '').trim();\nconst date    = body.date   || new Date().toISOString();\nconst source  = body.source || 'netroia.tech';\nif (!name    || name.length    < 2)   throw new Error('Champ name invalide');\nif (!email   || !email.includes('@')) throw new Error('Champ email invalide');\nif (!message || message.length < 10)  throw new Error('Message trop court');\nreturn [{ json: {\n  source_type : 'form',\n  user_input  : message,\n  ai_response : null,\n  session_id  : null,\n  name, email, service, date,\n  timestamp   : new Date().toISOString(),\n  has_email   : true,\n} }];"
+        },
+        "id": "valider-contact",
+        "name": "Valider Contact",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          480,
+          960
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.user_input }}",
+          "options": {
+            "systemMessage": "Tu es l'Agent d'analyse NetroIA, assistant commercial IA specialise en automatisation pour PME.\nTu incarnes NetroIA (agence automatisation IA B2B, Nantes, France — fondateur Jordan Vincent).\n\nROLE : Qualifier les besoins du visiteur en automatisation et IA.\n- Poser des questions pertinentes pour comprendre le processus metier.\n- Proposer des solutions concretes issues de l'offre NetroIA.\n- Guider vers un audit express ou un rendez-vous decouverte 30 min.\n\nOFFRES NETROIA :\n- Pack Starter (500-1000 EUR) : automatisation simple, agent IA de base\n- Pack Avance (1200-2500 EUR) : workflows complexes, integrations multi-outils\n- Pack Sur Mesure (5000-10000 EUR) : systeme agentique complet, architecture IA\n- Pack Personnalise (sur devis) : automatisation + IA + webdesign combines\n\nREGLES :\n1. Reponses courtes (2 a 4 phrases max) adaptees a un terminal de chat.\n2. Toujours terminer par une question de qualification.\n3. Si audit, coordonnees, rendez-vous ou devis mentionne : confirmer et encourager.\n4. Ton : professionnel, direct, expert mais accessible.\n5. Langue : francais systematiquement.\n6. Ne jamais inventer de chiffres ou clients — rester factuel sur l'offre.",
+            "returnIntermediateSteps": false
+          }
+        },
+        "id": "agent-ia",
+        "name": "Agent IA Terminal",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          656,
+          608
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4o"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0.7
+          }
+        },
+        "id": "openai-conv",
+        "name": "OpenAI Conversation",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          624,
+          800
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "g1I5vYXiH7nvxbYX",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const validData = $('Valider Terminal').first().json;\nreturn [{ json: {\n  source_type : 'terminal',\n  user_input  : validData.user_input,\n  ai_response : $json.output || '',\n  session_id  : validData.session_id,\n  name        : null,\n  email       : null,\n  service     : null,\n  date        : validData.timestamp,\n  timestamp   : validData.timestamp,\n  has_email   : false,\n} }];"
+        },
+        "id": "preparer-terminal",
+        "name": "Preparer Terminal",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          944,
+          608
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: $input.item.json }];"
+        },
+        "id": "donnees-source",
+        "name": "Donnees Source",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1184,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=Analyse ce message prospect et retourne le JSON de classification.\n\nSOURCE : {{ $json.source_type }}\nNOM : {{ $json.name || 'Visiteur terminal' }}\nEMAIL : {{ $json.email || 'Non communique' }}\nSERVICE : {{ $json.service || 'Non specifie' }}\nMESSAGE : {{ $json.user_input }}\n\nOFFRES NETROIA :\n- starter (500-1000 EUR) : Automatisation simple ou agent IA de base\n- avance (1200-2500 EUR) : Workflows complexes, integrations multi-outils\n- sur_mesure (5000-10000 EUR) : Systeme agentique complet, architecture IA\n- personnalise (sur devis) : Automatisation + Agent IA + Webdesign combines\n\nRetourne UNIQUEMENT le JSON valide selon le schema fourni.",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "Tu es un expert commercial IA B2B. Tu analyses les messages prospects de NetroIA (agence automatisation IA, Nantes, France). Temperature=0 : tes reponses sont deterministes. Tu retournes UNIQUEMENT du JSON valide selon le schema fourni, aucun texte autour.",
+            "returnIntermediateSteps": false
+          }
+        },
+        "id": "classifier-node",
+        "name": "Classifier Demande",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          1424,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4.1-mini"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0
+          }
+        },
+        "id": "openai-mini",
+        "name": "OpenAI Classification",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          1344,
+          912
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "g1I5vYXiH7nvxbYX",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "schemaType": "manual",
+          "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"urgence\":{\"type\":\"string\",\"enum\":[\"haute\",\"normale\",\"basse\"],\"description\":\"Niveau d'urgence de la demande\"},\"type_besoin\":{\"type\":\"string\",\"enum\":[\"automatisation\",\"agent_ia\",\"site_web\",\"combine\",\"autre\"],\"description\":\"Type de besoin principal detecte\"},\"budget_estime\":{\"type\":\"string\",\"enum\":[\"starter\",\"avance\",\"sur_mesure\",\"personnalise\"],\"description\":\"Pack NetroIA correspondant au budget estime\"},\"resume_besoins\":{\"type\":\"string\",\"description\":\"Resume du besoin en 2-3 phrases maximum\"},\"actions_suggerees\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"3 actions concretes prioritaires pour Jordan\"},\"score_lead\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":10,\"description\":\"Score de qualite du lead (1=froid, 10=pret a signer)\"}},\"required\":[\"urgence\",\"type_besoin\",\"budget_estime\",\"resume_besoins\",\"actions_suggerees\",\"score_lead\"]}"
+        },
+        "id": "schema-classif",
+        "name": "Schema Classification",
+        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+        "typeVersion": 1.3,
+        "position": [
+          1552,
+          912
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const base   = $('Donnees Source').first().json;\nconst classif = $json.output || {};\nconst packLabels = {\n  starter      : 'Pack Starter (500 - 1 000 EUR)',\n  avance       : 'Pack Avance (1 200 - 2 500 EUR)',\n  sur_mesure   : 'Pack Sur Mesure (5 000 - 10 000 EUR)',\n  personnalise : 'Pack Personnalise (sur devis)',\n};\nreturn [{ json: {\n  ...base,\n  urgence           : classif.urgence           || 'normale',\n  type_besoin       : classif.type_besoin       || 'autre',\n  budget_estime     : classif.budget_estime     || 'starter',\n  resume_besoins    : classif.resume_besoins    || '',\n  actions_suggerees : (classif.actions_suggerees || []).join(' | '),\n  score_lead        : classif.score_lead        || 1,\n  pack_label        : packLabels[classif.budget_estime] || classif.budget_estime || '',\n  horodatage        : new Date().toISOString(),\n  has_email         : !!(base.email && base.email.trim()),\n} }];"
+        },
+        "id": "preparer-enrichi",
+        "name": "Preparer Enrichi",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1664,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "or",
+            "conditions": [
+              {
+                "id": "cond-score",
+                "leftValue": "={{ $json.score_lead }}",
+                "rightValue": 5,
+                "operator": {
+                  "type": "number",
+                  "operation": "gte",
+                  "name": "filter.operator.gte"
+                }
+              },
+              {
+                "id": "cond-form",
+                "leftValue": "={{ $json.source_type }}",
+                "rightValue": "form",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "if-prospect",
+        "name": "IF Prospect Qualifie",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1904,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "loose"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "cond-email",
+                "leftValue": "={{ $json.has_email }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "name": "filter.operator.true"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "if-email",
+        "name": "IF Email Disponible",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2144,
+          592
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=Redige un email de reponse professionnel et personnalise pour ce prospect NetroIA.\n\nPROSPECT :\nPrenom       : {{ $json.name.split(' ')[0] }}\nNom complet  : {{ $json.name }}\nEmail        : {{ $json.email }}\nService      : {{ $json.service }}\nMessage      : {{ $json.user_input }}\n\nANALYSE IA :\nType besoin  : {{ $json.type_besoin }}\nBudget estime: {{ $json.budget_estime }}\nUrgence      : {{ $json.urgence }}\nScore lead   : {{ $json.score_lead }}/10\nResume       : {{ $json.resume_besoins }}\n\nOFFRES NETROIA :\n- Starter (500-1000 EUR) : Automatisation simple ou agent IA de base\n- Avance (1200-2500 EUR) : Workflows complexes, integrations multi-outils\n- Sur mesure (5000-10000 EUR) : Systeme agentique complet, architecture IA\n- Personnalise (sur devis) : Automatisation + Agent IA + Webdesign\n\nINSTRUCTIONS :\nRedige un email HTML (pas Markdown) avec :\n1. Accroche personnalisee (prenom + type besoin detecte)\n2. Confirmation reception + delai reponse 24h\n3. 3 questions de qualification pertinentes\n4. Presentation courte de l'offre correspondante ({{ $json.budget_estime }})\n5. CTA : reserver un appel decouverte 30 min\n6. Signature : Jordan Vincent | Fondateur NetroIA | captain@netroia.com\n\nTon : professionnel, direct, axe resultats. Pas de jargon technique.\nLangue : francais. Format : HTML complet.",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "Tu es Jordan Vincent, fondateur de NetroIA (agence automatisation IA B2B, Nantes). Tu rediges des emails de reponse prospect chaleureux, professionnels et axes resultats. Tu retournes UNIQUEMENT du JSON valide selon le schema fourni.",
+            "returnIntermediateSteps": false
+          }
+        },
+        "id": "generer-email",
+        "name": "Generer Email",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          2384,
+          464
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4.1"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0.7
+          }
+        },
+        "id": "openai-email",
+        "name": "OpenAI Email",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          2304,
+          672
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "g1I5vYXiH7nvxbYX",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "schemaType": "manual",
+          "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"email_subject\":{\"type\":\"string\",\"description\":\"Objet de l'email, accrocheur et personnalise\"},\"email_body_html\":{\"type\":\"string\",\"description\":\"Corps de l'email en HTML complet\"}},\"required\":[\"email_subject\",\"email_body_html\"]}"
+        },
+        "id": "schema-email",
+        "name": "Schema Email",
+        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+        "typeVersion": 1.3,
+        "position": [
+          2512,
+          672
+        ]
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Preparer Enrichi').first().json.email }}",
+          "subject": "={{ $json.output.email_subject || 'Votre demande NetroIA - ' + $('Preparer Enrichi').first().json.name }}",
+          "message": "={{ $json.output.email_body_html || '<p>Merci pour votre message. Nous vous contactons sous 24h.</p>' }}",
+          "options": {
+            "bccList": "captain@netroia.com",
+            "senderName": "NetroIA"
+          }
+        },
+        "id": "envoyer-email",
+        "name": "Envoyer Email Prospect",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          2624,
+          464
+        ],
+        "webhookId": "4b793094-86ae-4b69-8fd6-dc40bedd31ec",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "1Bayzmr9ePmWdToL",
+            "name": "captain"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1MfPCOMGtLsEuOq4AdyE93FTOb58hEthntAHULFLXeKE",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "Feuille 1",
+            "mode": "name"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "date": "={{ $('Preparer Enrichi').first().json.date }}",
+              "name": "={{ $('Preparer Enrichi').first().json.name || 'Terminal - ' + $('Preparer Enrichi').first().json.session_id }}",
+              "email": "={{ $('Preparer Enrichi').first().json.email || 'N/A' }}",
+              "service": "={{ $('Preparer Enrichi').first().json.service || $('Preparer Enrichi').first().json.source_type }}",
+              "type_besoin": "={{ $('Preparer Enrichi').first().json.type_besoin }}",
+              "budget_estime": "={{ $('Preparer Enrichi').first().json.budget_estime }}",
+              "urgence": "={{ $('Preparer Enrichi').first().json.urgence }}",
+              "score_lead": "={{ $('Preparer Enrichi').first().json.score_lead }}",
+              "resume_besoins": "={{ $('Preparer Enrichi').first().json.resume_besoins }}",
+              "horodatage": "={{ $('Preparer Enrichi').first().json.horodatage }}"
+            },
+            "schema": [
+              {
+                "id": "date",
+                "displayName": "date",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "name",
+                "displayName": "name",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "email",
+                "displayName": "email",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "service",
+                "displayName": "service",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "type_besoin",
+                "displayName": "type_besoin",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "budget_estime",
+                "displayName": "budget_estime",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "urgence",
+                "displayName": "urgence",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "score_lead",
+                "displayName": "score_lead",
+                "required": false,
+                "defaultMatch": false,
+                "type": "number"
+              },
+              {
+                "id": "resume_besoins",
+                "displayName": "resume_besoins",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              },
+              {
+                "id": "horodatage",
+                "displayName": "horodatage",
+                "required": false,
+                "defaultMatch": false,
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "logger-sheets",
+        "name": "Logger Sheets",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.4,
+        "position": [
+          2864,
+          592
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "96DyhZeedQou7Yho",
+            "name": "Google Sheets account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0A8SHN845D",
+            "mode": "list",
+            "cachedResultName": "n8n-alerts"
+          },
+          "messageType": "block",
+          "blocksUi": "[{\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"={{ $('Preparer Enrichi').first().json.source_type === 'form' ? 'NOUVEAU PROSPECT (formulaire)' : 'LEAD TERMINAL IA' }} — NetroIA\",\"emoji\":true}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Contact :*\\n={{ $('Preparer Enrichi').first().json.name || 'Visiteur terminal - ' + $('Preparer Enrichi').first().json.session_id }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Email :*\\n={{ $('Preparer Enrichi').first().json.email || 'Non communique' }}\"}]},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Score Lead :*\\n={{ $('Preparer Enrichi').first().json.score_lead }}/10 | {{ $('Preparer Enrichi').first().json.urgence }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Pack estime :*\\n={{ $('Preparer Enrichi').first().json.pack_label }}\"}]},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Besoin :*\\n={{ $('Preparer Enrichi').first().json.type_besoin }} | {{ $('Preparer Enrichi').first().json.resume_besoins }}\"}},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Message :*\\n={{ $('Preparer Enrichi').first().json.user_input }}\"}},{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"={{ $('Preparer Enrichi').first().json.source_type }} | {{ $('Preparer Enrichi').first().json.horodatage }}\"}]}]",
+          "otherOptions": {}
+        },
+        "id": "alerte-slack",
+        "name": "Alerte Slack",
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          3104,
+          592
+        ],
+        "webhookId": "9cab0c34-3de0-4a4d-bf1d-b1ce5e096f51",
+        "credentials": {
+          "slackOAuth2Api": {
+            "id": "HQ7TA73vHn5QPIQs",
+            "name": "Slack account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify(  $('Preparer Enrichi').first().json.source_type === 'terminal'    ? { response: $('Preparer Enrichi').first().json.ai_response || 'Votre demande a bien ete enregistree.', session_id: $('Preparer Enrichi').first().json.session_id }    : { success: true, message: 'Message recu. Nous vous repondons dans les 24h.' }) }}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "https://netroia.tech"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Content-Type"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "reponse-finale",
+        "name": "Reponse Finale",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          3344,
+          592
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({  response: $('Preparer Enrichi').first().json.ai_response || '',  session_id: $('Preparer Enrichi').first().json.session_id}) }}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "https://netroia.tech"
+                },
+                {
+                  "name": "Access-Control-Allow-Headers",
+                  "value": "Content-Type"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "reponse-direct",
+        "name": "Reponse Directe",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2144,
+          864
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook Terminal": {
+        "main": [
+          [
+            {
+              "node": "Valider Terminal",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Valider Terminal": {
+        "main": [
+          [
+            {
+              "node": "Agent IA Terminal",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agent IA Terminal": {
+        "main": [
+          [
+            {
+              "node": "Preparer Terminal",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Preparer Terminal": {
+        "main": [
+          [
+            {
+              "node": "Donnees Source",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook Contact": {
+        "main": [
+          [
+            {
+              "node": "Valider Contact",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Valider Contact": {
+        "main": [
+          [
+            {
+              "node": "Donnees Source",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Donnees Source": {
+        "main": [
+          [
+            {
+              "node": "Classifier Demande",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Classifier Demande": {
+        "main": [
+          [
+            {
+              "node": "Preparer Enrichi",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Preparer Enrichi": {
+        "main": [
+          [
+            {
+              "node": "IF Prospect Qualifie",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Prospect Qualifie": {
+        "main": [
+          [
+            {
+              "node": "IF Email Disponible",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Reponse Directe",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Email Disponible": {
+        "main": [
+          [
+            {
+              "node": "Generer Email",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Logger Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generer Email": {
+        "main": [
+          [
+            {
+              "node": "Envoyer Email Prospect",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Envoyer Email Prospect": {
+        "main": [
+          [
+            {
+              "node": "Logger Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Logger Sheets": {
+        "main": [
+          [
+            {
+              "node": "Alerte Slack",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Alerte Slack": {
+        "main": [
+          [
+            {
+              "node": "Reponse Finale",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Conversation": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Agent IA Terminal",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Classification": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Classifier Demande",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schema Classification": {
+        "ai_outputParser": [
+          [
+            {
+              "node": "Classifier Demande",
+              "type": "ai_outputParser",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Email": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Generer Email",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schema Email": {
+        "ai_outputParser": [
+          [
+            {
+              "node": "Generer Email",
+              "type": "ai_outputParser",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Neo IA",
+    "name": null,
+    "description": null,
+    "autosaved": false
+  }
+}

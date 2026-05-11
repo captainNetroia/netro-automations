@@ -1,0 +1,1287 @@
+{
+  "name": "AGENT IA Prospection",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 10,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ],
+          "readStatus": "unread"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        736
+      ],
+      "id": "fe385886-5749-4841-91f6-c31b68d60ba8",
+      "name": "Gmail Nouveau Client",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qnyc8qWHv3LhocKw",
+          "name": "Captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        368,
+        16
+      ],
+      "id": "c1700385-73b7-4b4f-8e70-60a324c470ff",
+      "name": "PDF extration"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        496,
+        752
+      ],
+      "id": "eb981181-c0b7-440b-b3d4-a40c523db9c8",
+      "name": "Combine"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 👀 Ce nœud sert uniquement à afficher la structure brute\nreturn {\n  json: $json\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        752
+      ],
+      "id": "aefbf98e-1340-4316-9a55-b4d041da1df4",
+      "name": "return"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\n// =========================\n// 1. Récupération du texte du mail\n// =========================\nlet texteMail = data.text || data.textAsHtml || data.html || \"\";\ntexteMail = texteMail\n  .replace(/<[^>]+>/g, \" \")\n  .replace(/\\s+/g, \" \")\n  .trim();\n\n// =========================\n// 2. Récupération du texte du PDF via OCR\n// =========================\nlet textePDF = \"\";\ntry {\n  // Vérifie si le résultat OCR existe\n  if (data.ParsedResults && data.ParsedResults[0]?.ParsedText) {\n    textePDF = data.ParsedResults[0].ParsedText\n      .replace(/\\\\n/g, \" \")\n      .replace(/\\s+/g, \" \")\n      .trim();\n  } else if (data.data) {\n    // Fallback au texte déjà présent dans data.data (si OCR non utilisé)\n    const parsed = typeof data.data === \"string\" ? data.data : JSON.stringify(data.data);\n    textePDF = parsed.replace(/\\s+/g, \" \").trim();\n  }\n} catch (e) {\n  textePDF = \"\";\n}\n\n// =========================\n// 3. Fusion intelligente\n// =========================\nconst cleanText = [texteMail, textePDF].filter(Boolean).join(\"\\n\\n\");\n\n// =========================\n// 4. Structure enrichie\n// =========================\nreturn {\n  json: {\n    email_source: data.from?.value?.[0]?.address || \"\",\n    client_name: data.from?.value?.[0]?.name || \"\",\n    subject: data.subject || \"\",\n    cleanText,\n\n    context_entreprise: {\n      nom: \"\",\n      secteur: \"\",\n      taille: \"\",\n      localisation: \"\",\n      site: \"\"\n    },\n\n    contact_info: {\n      nom: data.from?.value?.[0]?.name || \"\",\n      fonction: \"\",\n      langue: \"fr\",\n      niveau_technique: \"\"\n    },\n\n    besoin_implicite: {\n      probleme: \"\",\n      priorite: \"\",\n      objectif: \"\"\n    },\n\n    documents_partages: [\n      {\n        nom: data.attachment_0?.fileName || \"Non précisé\",\n        contenu: textePDF || \"Non disponible\"\n      }\n    ]\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        752
+      ],
+      "id": "c1aaba15-d570-4366-bc9b-c198e7840f74",
+      "name": "nettoyage"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.1",
+          "mode": "list",
+          "cachedResultName": "gpt-5.1"
+        },
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        960
+      ],
+      "id": "cbeab85c-97dc-4fe4-a85b-ec250f4964fa",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "B8Y3LX7qWdrxwhLU",
+          "name": "gpt n8n local"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $runExecutionId }}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1072,
+        960
+      ],
+      "id": "62942073-7f54-4789-bf76-1aa0428128b2",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Récupère les données d'entrée\nconst data = $json;\n\n// On prend le texte du mail ou du HTML (fallback si texte vide)\nlet texteSource = data.text || data.textAsHtml || data.html || \"\";\n\n// Nettoyage : supprime les balises HTML et espaces inutiles\nconst cleanText = texteSource\n  .replace(/<[^>]+>/g, ' ') // supprime le HTML\n  .replace(/\\s+/g, ' ') // supprime espaces multiples\n  .trim();\n\nreturn {\n  json: {\n    email_source: data.from?.value?.[0]?.address || '',\n    client_name: data.from?.value?.[0]?.name || '',\n    subject: data.subject || '',\n    cleanText,\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        16
+      ],
+      "id": "7bceb8bf-61de-42e1-a017-5a2151fd05d5",
+      "name": "nettoyage1"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4c77bbcc-a98a-493a-86f0-e30a062cdbc6",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "19zqKgI9FraG7jii2GOlOTXvzQmP8tDvGID1jIBht56c",
+          "mode": "list",
+          "cachedResultName": "Modèle Proposition commerciale 1",
+          "cachedResultUrl": "https://docs.google.com/document/d/19zqKgI9FraG7jii2GOlOTXvzQmP8tDvGID1jIBht56c/edit?usp=drivesdk"
+        },
+        "name": "=Propale {{ $json.output['Nom client'] }}\n{{ $now.format('dd-MM-yyyy') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1552,
+        848
+      ],
+      "id": "d7deeec4-3432-4e69-b73c-2d8cb6cb3c4b",
+      "name": "Copy file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "kUnG6KzjVaYwqq9a",
+          "name": "Google Drive Captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{nom.client}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Nom client'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{client.entreprise}} ",
+              "replaceText": "={{ $('AI Agent').item.json.output.Entreprise }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{mail}}",
+              "replaceText": "={{ $('Agent commercial EXPERT IA').item.json.output.Email }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{phone}}",
+              "replaceText": "={{ $('Agent commercial EXPERT IA').item.json.output['Téléphone'] }}",
+              "matchCase": true
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Introduction}}",
+              "replaceText": "={{ $('Agent commercial EXPERT IA').item.json.output.Introduction }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": " {{Besoin}}",
+              "replaceText": "={{ $('Agent commercial EXPERT IA').item.json.output.Besoin }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{ABesoin}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Analyse du besoin'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Problème}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Problème'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Solution}}",
+              "replaceText": "={{ $('AI Agent').item.json.output.Solution }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Proposition}}",
+              "replaceText": "={{ $('AI Agent').item.json.output.Proposition }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Approche}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Notre approche'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Projet}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Méthodologie projet'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Détail}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Détails méthodologiques'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{services}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Service proposé'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Benef}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Bénéfices attendus'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Budget}}",
+              "replaceText": "={{ $('AI Agent').item.json.output['Budget global'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Conclusion}}",
+              "replaceText": "={{ $('AI Agent').item.json.output.Conclusion }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        848
+      ],
+      "id": "9e7ba06c-49dd-4e89-a0c2-fb20d8442c91",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "eM8RKGbE6zx4iETG",
+          "name": "Google Docs Captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appKRJNg61Y6CXInk",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblOGPLMaOAF45xrn",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Statut du lead": "={{ \n  (\n    $json[\"document_envoye\"] === true || $json[\"document_envoye\"] === \"true\"\n      ? \"Proposition envoyée\"\n      : $json[\"score\"] >= 7\n        ? \"En cours\"\n        : $json[\"score\"] >= 4\n          ? \"Nouveau\"\n          : \"Abandonné\"\n  ).trim().normalize(\"NFC\")\n}}",
+            "Client Name": "={{ $json.output['Nom client'] }}",
+            "Téléphone": "={{ $json.output['Téléphone'] }}",
+            "Sujet": "={{ $json.output.Besoin }}",
+            "Message": "={{ $json.output.Introduction }}",
+            "Date": "={{$now}}",
+            "Company name": "={{ $json.output.Entreprise }}",
+            "PDF Contenu": "={{ $('nettoyage').item.json.documents_partages[0].contenu }}",
+            "Source du contact": "={{\n  $json[\"source_contact\"]\n  || (\n    $json[\"email\"] ? \"Email\"\n    : $json[\"whatsapp\"] ? \"Réseaux sociaux\"\n    : \"Autre\"\n  )\n}}",
+            "Date de réception": "={{$now}}",
+            "Priorité": "={{\n  $json[\"score\"] >= 8 ? \"Haute\" :\n  $json[\"score\"] >= 5 ? \"Normale\" :\n  \"Basse\"\n}}",
+            "Langue détectée": "={{\n  $json[\"lang\"] === \"fr\" ? \"Français\" :\n  $json[\"lang\"] === \"en\" ? \"Anglais\" :\n  $json[\"lang\"] === \"es\" ? \"Espagnol\" :\n  $json[\"lang\"] === \"de\" ? \"Allemand\" :\n  \"Autre\"\n}}",
+            "Email": "={{ $json.output.Email }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status client",
+              "displayName": "Status client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Téléphone",
+              "displayName": "Téléphone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sujet",
+              "displayName": "Sujet",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company name",
+              "displayName": "Company name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PDF Contenu",
+              "displayName": "PDF Contenu",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Statut du lead",
+              "displayName": "Statut du lead",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Nouveau",
+                  "value": "Nouveau"
+                },
+                {
+                  "name": "En cours",
+                  "value": "En cours"
+                },
+                {
+                  "name": "Converti",
+                  "value": "Converti"
+                },
+                {
+                  "name": "Abandonné",
+                  "value": "Abandonné"
+                },
+                {
+                  "name": "Proposition envoyée",
+                  "value": "Proposition envoyée"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Source du contact",
+              "displayName": "Source du contact",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Email",
+                  "value": "Email"
+                },
+                {
+                  "name": "Site Web",
+                  "value": "Site Web"
+                },
+                {
+                  "name": "Téléphone",
+                  "value": "Téléphone"
+                },
+                {
+                  "name": "Réseaux sociaux",
+                  "value": "Réseaux sociaux"
+                },
+                {
+                  "name": "En personne",
+                  "value": "En personne"
+                },
+                {
+                  "name": "Autre",
+                  "value": "Autre"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date de réception",
+              "displayName": "Date de réception",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Priorité",
+              "displayName": "Priorité",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Haute",
+                  "value": "Haute"
+                },
+                {
+                  "name": "Normale",
+                  "value": "Normale"
+                },
+                {
+                  "name": "Basse",
+                  "value": "Basse"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Langue détectée",
+              "displayName": "Langue détectée",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Français",
+                  "value": "Français"
+                },
+                {
+                  "name": "Anglais",
+                  "value": "Anglais"
+                },
+                {
+                  "name": "Espagnol",
+                  "value": "Espagnol"
+                },
+                {
+                  "name": "Allemand",
+                  "value": "Allemand"
+                },
+                {
+                  "name": "Autre",
+                  "value": "Autre"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fusion globale IA",
+              "displayName": "Fusion globale IA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Entreprise détectée",
+              "displayName": "Entreprise détectée",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "IA Résumé",
+              "displayName": "IA Résumé",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thème principal (IA)",
+              "displayName": "Thème principal (IA)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": "={{ true }}"
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1824,
+        544
+      ],
+      "id": "729deedf-6714-4445-8b0e-b09bd0326235",
+      "name": "airtable nouveau client"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eb2463c2-cfcd-4c92-b120-1e4d31d146a3",
+              "name": "document_envoye ",
+              "value": "={{ true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "feac9d31-1506-4f43-bac0-4ef63532dcdb",
+              "name": "Date de proposition",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": "={{ true }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1536,
+        544
+      ],
+      "id": "2b404dbf-e332-4f5f-bda5-bf6f45035fe7",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApiTool",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        928
+      ],
+      "id": "e77ebe37-0942-4e8f-aabb-7ea421181efc",
+      "name": "Facebook Graph API"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8cacfc9e-42d1-4b82-9f9a-5ed65c618c16"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        128,
+        272
+      ],
+      "id": "61db9891-28c5-4d86-9401-4b69c41e87c6",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/search?q=contact+entreprise+(médical+OR+restauration+OR+PME+OR+startup+OR+militaire+OR+agroalimentaire+OR+aéronautique)+automatisation+France\n",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        144,
+        448
+      ],
+      "id": "1b400c11-ada1-4207-9670-c0bac016961d",
+      "name": "HTTP Request",
+      "alwaysOutputData": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        768,
+        592
+      ],
+      "id": "a10aaf67-9a35-4004-812c-59833a9b6dd9",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "B8Y3LX7qWdrxwhLU",
+          "name": "gpt n8n local"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        592
+      ],
+      "id": "8ffdc62b-4e92-42b0-8e04-d2c472bcbf2d",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {}
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        768,
+        448
+      ],
+      "id": "c94cf463-485b-4e55-affe-60d66fad9502",
+      "name": "assistant"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items[0].json.results.map(r => ({\n  json: {\n    title: r.title,\n    link: r.link,\n    emails: r.emails && r.emails.length ? r.emails.join(\", \") : \"Aucun\",\n    phones: r.phones && r.phones.length ? r.phones.join(\", \") : \"Aucun\",\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        448
+      ],
+      "id": "20e018c0-5673-4170-9455-2e9d857cbb7d",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Import\nconst pdf = require('pdf-parse');\n\n// Get PDF binary data from previous node (e.g. Gmail)\nconst pdfData = items[0].binary.attachment_0.data;\nconst buffer = Buffer.from(pdfData, 'base64');\n\n// Parse the PDF to text\nconst result = await pdf(buffer);\n\nreturn [\n  {\n    json: {\n      text: result.text\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1152
+      ],
+      "id": "dd52821b-6e7d-4147-81f6-b92352e7f2b6",
+      "name": "Recupere Text PDF"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ocr.space/parse/image",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "K85910937988957"
+            },
+            {
+              "name": "language",
+              "value": "fre"
+            },
+            {
+              "name": "isOverlayRequired",
+              "value": "false"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "=attachment_0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        160,
+        912
+      ],
+      "id": "68f6e6c4-7c03-44be-881a-13adead5adf9",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1200,
+        1136
+      ],
+      "id": "c4de9b70-191f-4d5b-9d32-deaffb76681c",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1072,
+        1344
+      ],
+      "id": "acac7dfb-09ea-4f88-8c60-a4cc18e23cfa",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "B8Y3LX7qWdrxwhLU",
+          "name": "gpt n8n local"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un Commercial Expert en solutions d’intelligence artificielle B2B. Tu reçois un message et éventuellement un document du client décrivant ses besoins, contraintes ou attentes. Analyse ces informations pour en extraire les éléments clés de la demande et produire un JSON structuré. Les données peuvent venir : - du message email (demande initiale), - du document partagé (besoins détaillés, contraintes techniques). Le ton et la précision du texte doivent s’adapter au profil du contact : - concis et orienté ROI pour un décideur, - explicatif et détaillé pour un profil technique, - concret et engageant pour une PME. Voici les données combinées (email + PDF) : {{ $json.cleanText }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Analyse toutes les données (texte client, contexte, contact, besoins, documents partagés) et génère un JSON strict suivant cette structure : { \"Nom client\": \"\", \"Entreprise\": \"\", \"Téléphone\": \"\", \"Email\": \"\", \"Secteur\": \"\", \"Besoin\": \"\", \"Problème\": \"\", \"Proposition\": \"\", \"Solution\": \"\", \"Introduction\": \"\", \"Analyse du besoin\": \"\", \"Notre approche\": \"\", \"Méthodologie projet\": \"\", \"Détails méthodologiques\": \"\", \"Service proposé\": \"\", \"Bénéfices attendus\": \"\", \"Budget global\": \"\", \"Conclusion\": \"\" } Règles : 1. Combine les informations issues du mail et du document partagé. 2. Déduis les informations manquantes logiquement si elles sont implicites. 3. Si une donnée n’existe pas du tout, mets \"Non précisé\". 4. Le format final doit être du JSON pur, sans texte additionnel."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        752
+      ],
+      "id": "e4150af3-4fca-4250-92a3-46e08988b105",
+      "name": "Agent commercial EXPERT IA"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"Nom client\": \"string\",\n  \"Entreprise\": \"string\",\n  \"Téléphone\": \"string\",\n  \"Email\": \"string\",\n  \"Secteur\": \"string\",\n  \"Besoin\": \"string\",\n  \"Problème\": \"string\",\n  \"Proposition\": \"string\",\n  \"Solution\": \"string\",\n  \"Introduction\": \"string\",\n  \"Analyse du besoin\": \"string\",\n  \"Notre approche\": \"string\",\n  \"Méthodologie projet\": \"string\",\n  \"Détails méthodologiques\": \"string\",\n  \"Service proposé\": \"string\",\n  \"Bénéfices attendus\": \"string\",\n  \"Budget global\": \"string\",\n  \"Conclusion\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1296,
+        960
+      ],
+      "id": "041b6084-236b-464e-9846-320e132e45c6",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        448
+      ],
+      "id": "5d6605fa-c51f-4f78-9ff2-6d1850773bb6",
+      "name": "When clicking ‘Execute workflow’",
+      "disabled": true
+    }
+  ],
+  "pinData": {
+    "PDF extration": [
+      {
+        "json": {
+          "numpages": 1,
+          "numrender": 1,
+          "info": {
+            "PDFFormatVersion": "1.4",
+            "Language": null,
+            "EncryptFilterName": null,
+            "IsLinearized": false,
+            "IsAcroFormPresent": false,
+            "IsXFAPresent": false,
+            "IsCollectionPresent": false,
+            "IsSignaturesPresent": false,
+            "Author": "(anonymous)",
+            "CreationDate": "D:20251114154129+00'00'",
+            "Creator": "(unspecified)",
+            "Keywords": "",
+            "ModDate": "D:20251114154129+00'00'",
+            "Producer": "ReportLab PDF Library - www.reportlab.com",
+            "Subject": "(unspecified)",
+            "Title": "(anonymous)",
+            "Trapped": {
+              "name": "False"
+            }
+          },
+          "text": "",
+          "version": "5.3.31"
+        }
+      }
+    ],
+    "nettoyage": [
+      {
+        "json": {
+          "email_source": "vincent.jordan@hotmail.fr",
+          "client_name": "jordan vincent",
+          "subject": "TR: Intégration d’une solution IA dans notre entreprise",
+          "cleanText": "________________________________ De : jordan vincent Envoyé : vendredi 14 novembre 2025 16:44 À : captain@netroia.com Objet : Intégration d’une solution IA dans notre entreprise Bonjour, Je me permets de vous contacter car nous cherchons à intégrer de l’intelligence artificielle dans notre entreprise, NovaTech Solutions. On commence à accumuler pas mal de tâches répétitives, et l’équipe perd un temps fou sur l’analyse des documents et la préparation des rapports internes. On aimerait mettre en place plusieurs choses : * automatisation de nos tâches administratives, * analyse intelligente de nos documents internes, * un assistant IA interne pour nos équipes commerciales, * génération automatique de rapports pour nos clients, * amélioration du traitement des demandes entrantes. On utilise déjà un CRM interne, donc idéalement il faudrait que la solution puisse s’y connecter directement. On veut aussi être sûrs d’être bien dans le cadre de la RGPD, c’est important pour nous. Est-ce que vous pourriez nous dire si ce type d’accompagnement est dans vos services, et éventuellement nous proposer un plan d’intégration ou une méthode pour démarrer ? Merci d’avance pour votre retour. Marc Dupont NovaTech Solutions marc.dupont@novatech-solutions.com\n\nTitre : Demande d' intégration IA Client : Marc Dupont Entreprise : NovaT ech Solutions Projet Client F ictif Email : Objet : Besoins et concernant l'intégration d'un systètne d'intelligence artificielle Résumé des besoins Le client souhaite intégrer dans son entreprise un ensemble d'outils IA permettant - L : autom atisation des tz ches répétitives - L analyse de documents intemes - L a création d'un assistant interne pour les équipes commerciales - L a génération de rapports automatiques - L ' optimisation du traitement des demandes clients Intégration avec leur CRM actuel - Respect de la RGPD - Déploiement progressif en trois phases Objectif final : Mettre en place une infrastmcture LA fonctionnelle, stable et évolutive, capable d' améliorer la productivité globale et la qualité des opérations internes _",
+          "context_entreprise": {
+            "nom": "",
+            "secteur": "",
+            "taille": "",
+            "localisation": "",
+            "site": ""
+          },
+          "contact_info": {
+            "nom": "jordan vincent",
+            "fonction": "",
+            "langue": "fr",
+            "niveau_technique": ""
+          },
+          "besoin_implicite": {
+            "probleme": "",
+            "priorite": "",
+            "objectif": ""
+          },
+          "documents_partages": [
+            {
+              "nom": "Non précisé",
+              "contenu": "Titre : Demande d' intégration IA Client : Marc Dupont Entreprise : NovaT ech Solutions Projet Client F ictif Email : Objet : Besoins et concernant l'intégration d'un systètne d'intelligence artificielle Résumé des besoins Le client souhaite intégrer dans son entreprise un ensemble d'outils IA permettant - L : autom atisation des tz ches répétitives - L analyse de documents intemes - L a création d'un assistant interne pour les équipes commerciales - L a génération de rapports automatiques - L ' optimisation du traitement des demandes clients Intégration avec leur CRM actuel - Respect de la RGPD - Déploiement progressif en trois phases Objectif final : Mettre en place une infrastmcture LA fonctionnelle, stable et évolutive, capable d' améliorer la productivité globale et la qualité des opérations internes _"
+            }
+          ]
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Agent commercial EXPERT IA": [
+      {
+        "json": {
+          "output": {
+            "Nom client": "Marc Dupont",
+            "Entreprise": "NovaTech Solutions",
+            "Téléphone": "Non précisé",
+            "Email": "marc.dupont@novatech-solutions.com",
+            "Secteur": "Non précisé",
+            "Besoin": "Intégrer une infrastructure d’intelligence artificielle dans l’entreprise pour automatiser les tâches répétitives, analyser les documents internes, assister les équipes commerciales, générer automatiquement des rapports clients et optimiser le traitement des demandes entrantes, avec connexion au CRM existant et respect strict de la RGPD.",
+            "Problème": "Accumulation de tâches administratives et répétitives, perte de temps importante sur l’analyse de documents et la préparation de rapports internes, manque d’outils intelligents pour assister les équipes commerciales et traiter efficacement les demandes clients, absence actuelle d’infrastructure IA intégrée et structurée.",
+            "Proposition": "Proposer un accompagnement complet d’intégration IA en trois phases (diagnostic & cadrage, prototypage & pilotes, déploiement & industrialisation), incluant l’automatisation des tâches administratives, l’analyse intelligente de documents, la mise en place d’un assistant IA interne pour les équipes commerciales, la génération automatique de rapports et l’optimisation du traitement des demandes entrantes, le tout intégré au CRM interne et conforme à la RGPD.",
+            "Solution": "Mettre en place une plateforme IA modulaire connectée au CRM interne de NovaTech Solutions, comprenant : des workflows d’automatisation des tâches administratives, des modules d’analyse et d’extraction d’informations à partir des documents internes, un assistant IA interne pour les équipes commerciales (aide à la préparation de propositions, synthèse de comptes rendus, accès rapide aux données CRM), des générateurs de rapports automatiques pour les clients, et un système d’orchestration des demandes entrantes, le tout sécurisé, gouverné et conforme à la RGPD, avec un déploiement progressif en trois phases.",
+            "Introduction": "NovaTech Solutions, représentée par Marc Dupont, souhaite initier un projet structurant d’intégration de l’intelligence artificielle afin de gagner en productivité et en qualité opérationnelle. L’entreprise fait face à une augmentation significative des tâches répétitives, de l’analyse de documents et de la production de rapports, et recherche un partenaire capable de proposer un plan d’intégration IA progressif, connecté à son CRM interne et conforme à la RGPD.",
+            "Analyse du besoin": "Les informations transmises montrent un besoin global d’industrialisation des processus internes par l’IA. Les priorités exprimées sont : (1) automatiser les tâches administratives et répétitives qui consomment du temps à faible valeur ajoutée ; (2) mettre en place une analyse intelligente des documents internes pour en extraire rapidement les informations clés ; (3) doter les équipes commerciales d’un assistant IA interne pour les aider dans la préparation des échanges, la consultation des données CRM et la création de contenus ; (4) générer automatiquement des rapports pour les clients à partir des données existantes ; (5) améliorer et structurer le traitement des demandes entrantes (clients, prospects, internes). Le client dispose déjà d’un CRM interne, ce qui implique un besoin fort d’intégration technique et de synchronisation des données. La conformité RGPD est identifiée comme un critère non négociable. Le document mentionne un déploiement progressif en trois phases et un objectif final de mise en place d’une infrastructure IA stable, évolutive et orientée productivité globale.",
+            "Notre approche": "Adopter une approche d’accompagnement bout-en-bout, orientée résultats et retour sur investissement, en structurant le projet autour de trois axes : (1) cadrage métier et priorisation des cas d’usage à plus fort impact (tâches administratives, documents, commercial, rapports, demandes entrantes) ; (2) conception et intégration technique d’une architecture IA modulaire connectée au CRM, en garantissant la sécurité et la conformité RGPD ; (3) déploiement progressif avec pilotes, montée en charge contrôlée et accompagnement au changement des équipes. L’objectif est de livrer rapidement des premiers gains mesurables tout en construisant une base IA robuste et évolutive.",
+            "Méthodologie projet": "Le déploiement se fait en trois grandes phases :\n1) Phase 1 – Diagnostic & cadrage : ateliers avec les équipes métiers (administratif, commercial, support) pour cartographier les processus, identifier les tâches répétitives, analyser les flux documentaires, définir les priorités et les indicateurs de performance (temps gagné, qualité, délais de traitement). Audit du CRM interne et des contraintes RGPD.\n2) Phase 2 – Prototypage & pilotes : mise en place de prototypes ciblés (par exemple automatisation de quelques tâches administratives, assistant IA pour un groupe pilote de commerciaux, génération de rapports types) afin de valider les intégrations CRM, la pertinence des modèles IA et l’acceptation par les utilisateurs. Ajustements fonctionnels et techniques.\n3) Phase 3 – Déploiement progressif & industrialisation : généralisation des cas d’usage validés, mise en production sécurisée, supervision des performances, optimisation continue, documentation et formation des équipes. Mise en place d’une gouvernance IA et d’un cadre RGPD opérationnel (gestion des données, droits d’accès, journalisation).",
+            "Détails méthodologiques": "\n- Cadrage fonctionnel : recueil détaillé des cas d’usage auprès de NovaTech Solutions, priorisation selon le gain de temps estimé, la complexité et l’impact business. Définition des règles métiers pour l’automatisation et la génération de rapports.\n- Architecture & intégration : conception d’une architecture IA modulaire interfacée avec le CRM interne (via API ou connecteurs), stockage sécurisé des données, choix des modèles IA adaptés (NLP pour analyse de documents et demandes entrantes, génération de texte pour rapports, moteurs de workflows pour l’automatisation).\n- Automatisation des tâches administratives : identification des tâches répétitives (saisie, mises à jour CRM, préparation de synthèses), création de workflows automatisés supervisés par les équipes, mise en place de tableaux de bord de suivi.\n- Analyse intelligente des documents : mise en place de pipelines de traitement de documents (classification, extraction d’informations clés, recherche sémantique), indexation sécurisée des documents internes et mécanismes de contrôle qualité des résultats.\n- Assistant IA pour les équipes commerciales : développement d’un assistant interne connecté au CRM, capable de résumer les interactions clients, proposer des réponses structurées, préparer des comptes rendus de rendez-vous et aider à la rédaction de propositions commerciales.\n- Génération automatique de rapports : définition de modèles de rapports clients, alimentation automatique à partir des données internes et CRM, validation humaine avant envoi, historisation des rapports générés.\n- Traitement des demandes entrantes : mise en place d’un tri intelligent, de la catégorisation et de la priorisation des demandes (emails, formulaires, tickets), avec routage automatique vers les bons interlocuteurs.\n- RGPD & sécurité : anonymisation ou pseudonymisation lorsque nécessaire, limitation des données utilisées par les modèles, gestion des droits d’accès, traçabilité des traitements, hébergement et stockage conformes aux exigences européennes.\n- Conduite du changement : formation des utilisateurs, documentation claire, points de feedback réguliers pour améliorer l’ergonomie et l’adoption des outils IA.",
+            "Service proposé": "Un service d’accompagnement complet à l’intégration d’une solution IA B2B pour NovaTech Solutions, comprenant : audit et cadrage des besoins, définition de la feuille de route IA, design de l’architecture technique, intégration avec le CRM interne, développement et configuration des modules IA (automatisation, analyse documentaire, assistant commercial, génération de rapports, traitement des demandes), mise en place de la gouvernance RGPD, déploiement progressif en trois phases et accompagnement au changement des équipes.",
+            "Bénéfices attendus": "\n- Réduction significative du temps passé sur les tâches administratives et répétitives.\n- Accélération de l’analyse et de l’exploitation des documents internes.\n- Amélioration de l’efficacité et de la réactivité des équipes commerciales grâce à un assistant IA dédié.\n- Production plus rapide, plus homogène et plus fiable des rapports clients.\n- Traitement plus fluide, priorisé et traçable des demandes entrantes.\n- Meilleure productivité globale et qualité des opérations internes.\n- Mise en place d’une infrastructure IA stable, évolutive et conforme à la RGPD, capable de supporter de nouveaux cas d’usage dans le futur.",
+            "Budget global": "Non précisé",
+            "Conclusion": "Les éléments fournis par Marc Dupont montrent une volonté claire de structurer l’usage de l’IA au sein de NovaTech Solutions pour gagner en productivité et en qualité de service. Une démarche d’intégration progressive, en trois phases, centrée sur les cas d’usage à fort impact (automatisation, documents, assistant commercial, rapports, demandes entrantes) et pleinement intégrée au CRM et au cadre RGPD, répond directement aux attentes exprimées. Le prochain pas recommandé est l’organisation d’un atelier de cadrage pour préciser les priorités, les contraintes techniques et les indicateurs de succès, afin de formaliser un plan d’intégration IA détaillé et un budget associé."
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Nouveau Client": {
+      "main": [
+        [
+          {
+            "node": "Combine",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Recupere Text PDF",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine": {
+      "main": [
+        [
+          {
+            "node": "return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "return": {
+      "main": [
+        [
+          {
+            "node": "nettoyage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nettoyage": {
+      "main": [
+        [
+          {
+            "node": "Agent commercial EXPERT IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent commercial EXPERT IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agent commercial EXPERT IA",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "airtable nouveau client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "assistant",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "assistant",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "assistant": {
+      "main": [
+        [
+          {
+            "node": "Agent commercial EXPERT IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Combine",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent commercial EXPERT IA": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agent commercial EXPERT IA",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "Uc73W2jImd5arguG"
+  },
+  "versionId": "d2aabba3-f071-4ee9-8f33-cfce5ef3d4f7",
+  "meta": {
+    "instanceId": "d1117b063e960848a7bce8e77a8fc680199da682ac55c2b42990e570883b3d0e"
+  },
+  "id": "K9ELW0qrpBuq7NFO",
+  "tags": []
+}

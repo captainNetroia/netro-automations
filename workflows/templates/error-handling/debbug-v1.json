@@ -1,0 +1,827 @@
+{
+  "name": "Debbug",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bf680cd2-6668-4bd7-a4ac-56f7f7472242",
+      "name": "Error Trigger",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"id_evenement\": \"{{ $json.event_id }}\",\n  \"horodatage\": \"{{ $json.timestamp }}\",\n  \"environnement\": \"{{ $json.env }}\",\n\n  \"id_workflow\": \"{{ $json.workflow_id }}\",\n  \"nom_workflow\": \"{{ $json.workflow_name }}\",\n  \"id_execution\": \"{{ $json.execution_id }}\",\n  \"url_execution\": \"{{ $json.execution_url }}\",\n  \"relance_de\": \"{{ $json.retry_of }}\",\n\n  \"dernier_noeud\": \"{{ $json.last_node }}\",\n  \"message_erreur\": \"{{ $json.error_message }}\",\n  \"trace_erreur\": \"{{ $json.error_stack }}\",\n  \"mode_execution\": \"{{ $json.mode }}\",\n\n  \"categorie_erreur\": \"{{ $json.category || ($json.error_message.match(/(401|403|429|timeout|ECONN|ENOTFOUND|rate|credential|auth)/i) ? 'TECHNIQUE' : 'METIER') }}\",\n\n  \"gravite\": \"{{ $json.env === 'prod' ? ($json.error_message.match(/(500|fatal|crash|cannot read|undefined|permission|401|403)/i) ? 'P1' : 'P2') : 'P3' }}\",\n\n  \"empreinte_erreur\": \"{{ ($json.workflow_id + '|' + $json.last_node + '|' + $json.error_message).toLowerCase().replace(/\\\\d+/g,'#').slice(0,180) }}\",\n\n  \"resume_court\": \"{{ '[' + ($json.env || 'env') + '] ' + ($json.workflow_name || 'workflow') + ' / ' + ($json.last_node || 'noeud') + ' → ' + ($json.error_message || 'erreur') }}\",\n\n  \"canaux_notification\": \"{{ $json.env === 'prod' ? ($json.error_message.match(/(fatal|crash|500|permission|cannot read|undefined)/i) ? ['slack','email'] : ['slack']) : ['tableau'] }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        96
+      ],
+      "id": "0ff5be27-3526-47fa-bc1e-93f9e0ca6167",
+      "name": "normaliser donnée"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1744,
+        -192
+      ],
+      "id": "c9f0d8d3-8208-42bf-b701-5ab9f90985c8",
+      "name": "Send a message",
+      "webhookId": "a8f80649-efff-4fe1-b79f-ea2d82baeea8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qnyc8qWHv3LhocKw",
+          "name": "Captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1680,
+        144
+      ],
+      "id": "b3c06d1b-d34f-463f-b902-9f6f028b4f13",
+      "name": "Send a message1",
+      "webhookId": "89e3c1cb-9857-43e6-aef6-813e01237e5d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3cfd0b56-bc25-4b06-ae2f-8d7643106935",
+              "name": "canal",
+              "value": "slack, email, tableur",
+              "type": "string"
+            },
+            {
+              "id": "99fbaf26-b433-481e-9b4a-4e48f5e9b5a8",
+              "name": "Titre",
+              "value": "Erreur interne N8N",
+              "type": "string"
+            },
+            {
+              "id": "98064f14-f738-4ba5-adf7-7d6d985ff3ef",
+              "name": "Message",
+              "value": "=Workflow : {{ $json.workflow.name }} \nDernier nœud : {{ $json.error.lastNodeExecuted }}  Message : {{ $json.error.message }}  \nExécution : {{ $json.execution.url }}",
+              "type": "string"
+            },
+            {
+              "id": "0de3ef34-45ad-4f41-9883-c57af511cbb3",
+              "name": "type",
+              "value": "erreur",
+              "type": "string"
+            },
+            {
+              "id": "4dcb39eb-7c9b-4005-acff-a462e5c67581",
+              "name": "destination",
+              "value": "netroninos.jv@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        288,
+        0
+      ],
+      "id": "e5e89610-0f09-457b-b968-bd3569ee52b5",
+      "name": "Préparer donnée erreur"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        272
+      ],
+      "id": "943e59d5-e027-431d-ad01-07e0707da427",
+      "name": "appelé par un autre workflow",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $items().length }}",
+                    "rightValue": "0",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6cb1d43d-d34e-466d-8517-52ad9bc705cd"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dfdcf4e1-f6ce-4683-8cf1-4ad798e979f2",
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        1216
+      ],
+      "id": "ee879955-e485-4972-bcd4-3fabedb1eb64",
+      "name": "Switch: router par canal"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "R6szXUnDTdCdcHSf",
+          "mode": "list",
+          "cachedResultName": "Erreur n8n",
+          "cachedResultUrl": "/projects/OsRS0h04c8ZOrl4b/datatables/R6szXUnDTdCdcHSf"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empreinte_erreur",
+              "keyValue": "={{ $json.empreinte_erreur }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        752,
+        1408
+      ],
+      "id": "1f7f4e0a-9868-45da-b5cf-722efcf2af9e",
+      "name": "Get row(s)1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "R6szXUnDTdCdcHSf",
+          "mode": "list",
+          "cachedResultName": "Erreur n8n",
+          "cachedResultUrl": "/projects/OsRS0h04c8ZOrl4b/datatables/R6szXUnDTdCdcHSf"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "solution_connue": false,
+            "corrigee": false,
+            "occurences": "={{ ($json.occurrences || 0) + 1 }}",
+            "horodatage": "={{ $node[\"normaliser donnée\"].json.horodatage }}",
+            "environnement": "={{ $node[\"normaliser donnée\"].json.environnement }}",
+            "id_evenement": "={{ $node[\"normaliser donnée\"].json.id_evenement }}",
+            "id_workflow": "={{ $node[\"normaliser donnée\"].json.id_workflow }}",
+            "nom_workflow": "={{ $node[\"normaliser donnée\"].json.nom_workflow }}",
+            "dernier_noeud": "={{ $node[\"normaliser donnée\"].json.dernier_noeud }}",
+            "categorie_erreur": "={{ $node[\"normaliser donnée\"].json.categorie_erreur }}",
+            "message_erreur": "={{ $node[\"normaliser donnée\"].json.message_erreur }}",
+            "trace_erreur": "={{ $node[\"normaliser donnée\"].json.trace_erreur }}",
+            "resume_court": "={{ $node[\"normaliser donnée\"].json.resume_court }}",
+            "solution_description": "={{ $node[\"normaliser donnée\"].json.empreinte_erreur }}",
+            "gravite": "={{ $node[\"normaliser donnée\"].json.gravite }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "erreur",
+              "displayName": "erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "id_evenement",
+              "displayName": "id_evenement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "empreinte_erreur",
+              "displayName": "empreinte_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "occurences",
+              "displayName": "occurences",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "horodatage",
+              "displayName": "horodatage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "environnement",
+              "displayName": "environnement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "id_workflow",
+              "displayName": "id_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "nom_workflow",
+              "displayName": "nom_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "dernier_noeud",
+              "displayName": "dernier_noeud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "categorie_erreur",
+              "displayName": "categorie_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "gravite",
+              "displayName": "gravite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_erreur",
+              "displayName": "message_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "trace_erreur",
+              "displayName": "trace_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "resume_court",
+              "displayName": "resume_court",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "solution_connue",
+              "displayName": "solution_connue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "solution_description",
+              "displayName": "solution_description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "corrigee",
+              "displayName": "corrigee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        128
+      ],
+      "id": "041bac26-ad10-4aee-bd71-fa1d1e9eae02",
+      "name": "Update row(s)"
+    },
+    {
+      "parameters": {
+        "operation": "rowExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "R6szXUnDTdCdcHSf",
+          "mode": "list",
+          "cachedResultName": "Erreur n8n",
+          "cachedResultUrl": "/projects/OsRS0h04c8ZOrl4b/datatables/R6szXUnDTdCdcHSf"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empreinte_erreur",
+              "keyValue": "={{ $node[\"normaliser donnée\"].json.empreinte_erreur }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -64
+      ],
+      "id": "92682fab-3391-4938-ac83-50d707d160da",
+      "name": "If row exists",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "R6szXUnDTdCdcHSf",
+          "mode": "list",
+          "cachedResultName": "Erreur n8n",
+          "cachedResultUrl": "/projects/OsRS0h04c8ZOrl4b/datatables/R6szXUnDTdCdcHSf"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empreinte_erreur",
+              "keyValue": "={{ $node[\"normaliser donnée\"].json.empreinte_erreur }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -64
+      ],
+      "id": "de17cd79-64f7-4f29-be09-88bf868d9774",
+      "name": "If row does not exist"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "R6szXUnDTdCdcHSf",
+          "mode": "list",
+          "cachedResultName": "Erreur n8n",
+          "cachedResultUrl": "/projects/OsRS0h04c8ZOrl4b/datatables/R6szXUnDTdCdcHSf"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "solution_connue": false,
+            "corrigee": false,
+            "occurences": 1,
+            "id_evenement": "={{ $node[\"normaliser donnée\"].json.id_evenement }}",
+            "empreinte_erreur": "={{ $node[\"normaliser donnée\"].json.empreinte_erreur }}}",
+            "horodatage": "={{ $node[\"normaliser donnée\"].json.horodatage }}",
+            "environnement": "={{ $node[\"normaliser donnée\"].json.environnement }}",
+            "id_workflow": "={{ $node[\"normaliser donnée\"].json.id_workflow }}",
+            "dernier_noeud": "={{ $node[\"normaliser donnée\"].json.dernier_noeud }}",
+            "nom_workflow": "={{ $node[\"normaliser donnée\"].json.nom_workflow }}",
+            "categorie_erreur": "={{ $node[\"normaliser donnée\"].json.categorie_erreur }}",
+            "message_erreur": "={{ $node[\"normaliser donnée\"].json.message_erreur }}",
+            "gravite": "={{ $node[\"normaliser donnée\"].json.gravite }}",
+            "trace_erreur": "={{ $node[\"normaliser donnée\"].json.trace_erreur }}",
+            "resume_court": "={{ $node[\"normaliser donnée\"].json.resume_court }}",
+            "solution_description": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "erreur",
+              "displayName": "erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "id_evenement",
+              "displayName": "id_evenement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "empreinte_erreur",
+              "displayName": "empreinte_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "occurences",
+              "displayName": "occurences",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "horodatage",
+              "displayName": "horodatage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "environnement",
+              "displayName": "environnement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "id_workflow",
+              "displayName": "id_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "nom_workflow",
+              "displayName": "nom_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "dernier_noeud",
+              "displayName": "dernier_noeud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "categorie_erreur",
+              "displayName": "categorie_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "gravite",
+              "displayName": "gravite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_erreur",
+              "displayName": "message_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "trace_erreur",
+              "displayName": "trace_erreur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "resume_court",
+              "displayName": "resume_court",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "solution_connue",
+              "displayName": "solution_connue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "solution_description",
+              "displayName": "solution_description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "corrigee",
+              "displayName": "corrigee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -64
+      ],
+      "id": "df81911a-b001-4ed4-a89b-d6b597d33e1b",
+      "name": "Insert row"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Préparer donnée erreur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normaliser donnée": {
+      "main": [
+        [
+          {
+            "node": "If row exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Préparer donnée erreur": {
+      "main": [
+        [
+          {
+            "node": "normaliser donnée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "appelé par un autre workflow": {
+      "main": [
+        []
+      ]
+    },
+    "Switch: router par canal": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Get row(s)1": {
+      "main": [
+        [
+          {
+            "node": "Switch: router par canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If row exists": {
+      "main": [
+        [
+          {
+            "node": "If row does not exist",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If row does not exist": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row(s)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "K9ELW0qrpBuq7NFO"
+  },
+  "versionId": "6769f177-642a-4bb5-820b-023763e753c8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d1117b063e960848a7bce8e77a8fc680199da682ac55c2b42990e570883b3d0e"
+  },
+  "id": "Uc73W2jImd5arguG",
+  "tags": []
+}

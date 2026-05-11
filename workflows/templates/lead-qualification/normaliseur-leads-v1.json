@@ -1,0 +1,1013 @@
+{
+  "name": "Normaliseur de Leads",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Contexte Métier\nQu'est-ce qu'un lead chaud pour vous ?"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        -32
+      ],
+      "id": "120cb6ad-6790-4bf0-aa91-705ae8fc53ec",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "33cadbf2-d4ee-4f7f-86ef-d579f4c2ff4f",
+              "name": "Name",
+              "value": "={{ $json.Name.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "8002319a-6709-41a5-8233-17682b7c1c1d",
+              "name": "email",
+              "value": "={{ ($json.Email || \"\").toLowerCase().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "c01bcf81-c323-4c01-a7a4-8d1bed71d9a2",
+              "name": "ai_context",
+              "value": "=Voici une demande de coaching pour Christophe Poncet. Prospect : {{ $json.Name }} | Pays : {{ $json.Pays }} | Besoin exprimé : {{ $json.Besoins }} | Engagement RGPD : {{ $json.rgpd }}",
+              "type": "string"
+            },
+            {
+              "id": "9b22be8f-41bf-4f0b-a230-a888130d94c4",
+              "name": "sessionId ",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "febc2b58-8265-4460-b969-53622834d06c",
+              "name": "lien_calendrier",
+              "value": "https://calendar.app.google/yL3BHm4hjw6Fjaty7",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true,
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        224
+      ],
+      "id": "90466bee-45c5-4b54-902d-f55a1b8c6ab3",
+      "name": "Normalisation",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "content": "##Formulaire \nReçoit les informations du prospect saisies sur le formulaire (nom, email, pays, besoin, consentement RGPD)."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -32
+      ],
+      "id": "3f02e669-3eab-4365-942c-8ca83a66202e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1hXRzaX_4NW4lUTKEgCc2wFg1n1KrcFJa8VgyqYtAcdk",
+          "mode": "list",
+          "cachedResultName": "Lead Christophe",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hXRzaX_4NW4lUTKEgCc2wFg1n1KrcFJa8VgyqYtAcdk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 413038531,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hXRzaX_4NW4lUTKEgCc2wFg1n1KrcFJa8VgyqYtAcdk/edit#gid=413038531"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Derniere_soumission": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+            "Date_reçus": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+            "Nom": "={{ $('Normalisation').item.json.Name }}",
+            "Texte_client": "={{ $('Normalisation').item.json.ai_context }}",
+            "Email": "={{ $('Normalisation').item.json.email }}",
+            "Pays": "={{ $('Formulaire').item.json.Pays }}",
+            "Type_lead": "={{ $json.output.type_lead }}",
+            "Intention": "={{ $json.output.intention }}",
+            "Timeline": "={{ $json.output.timeline }}",
+            "Budget": "={{ $json.output.budget }}",
+            "Score_confiance": "={{ $json.output.score_confiance }}",
+            "Justification_ia": "={{ $json.output.justification_ia }}",
+            "Resume_besoin": "={{ $json.output.resume_besoin }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Date_reçus",
+              "displayName": "Date_reçus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nom",
+              "displayName": "Nom",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Texte_client",
+              "displayName": "Texte_client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pays",
+              "displayName": "Pays",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Type_lead",
+              "displayName": "Type_lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Intention",
+              "displayName": "Intention",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timeline",
+              "displayName": "Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score_confiance",
+              "displayName": "Score_confiance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Justification_ia",
+              "displayName": "Justification_ia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Resume_besoin",
+              "displayName": "Resume_besoin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Action_effectuee",
+              "displayName": "Action_effectuee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Statut",
+              "displayName": "Statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nb_soumissions",
+              "displayName": "Nb_soumissions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Intitule_Mail",
+              "displayName": "Intitule_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Lien_Direct_Gmail",
+              "displayName": "Lien_Direct_Gmail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Derniere_soumission",
+              "displayName": "Derniere_soumission",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tokens_utilises",
+              "displayName": "Tokens_utilises",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1008,
+        224
+      ],
+      "id": "607156eb-ea79-43df-9673-feaeb9b6f771",
+      "name": "mise à jour client",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lXPXMmMAWcq6uE8R",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hXRzaX_4NW4lUTKEgCc2wFg1n1KrcFJa8VgyqYtAcdk",
+          "mode": "list",
+          "cachedResultName": "Lead Christophe",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hXRzaX_4NW4lUTKEgCc2wFg1n1KrcFJa8VgyqYtAcdk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 413038531,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hXRzaX_4NW4lUTKEgCc2wFg1n1KrcFJa8VgyqYtAcdk/edit#gid=413038531"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Action_effectuee": "email_calendly_envoye",
+            "Email": "={{ $('Normalisation').item.json.email }}",
+            "Derniere_soumission": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+            "Intitule_Mail": "={{ $('AI Agent').item.json.output.sujet_email }}",
+            "Lien_Direct_Gmail": "=ttps://mail.google.com/mail/u/0/#all/{{ $node[\"Gmail\"].json.threadId }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Date_reçus",
+              "displayName": "Date_reçus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nom",
+              "displayName": "Nom",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Texte_client",
+              "displayName": "Texte_client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pays",
+              "displayName": "Pays",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Type_lead",
+              "displayName": "Type_lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Intention",
+              "displayName": "Intention",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Timeline",
+              "displayName": "Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score_confiance",
+              "displayName": "Score_confiance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Justification_ia",
+              "displayName": "Justification_ia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resume_besoin",
+              "displayName": "Resume_besoin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Action_effectuee",
+              "displayName": "Action_effectuee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Statut",
+              "displayName": "Statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nb_soumissions",
+              "displayName": "Nb_soumissions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Intitule_Mail",
+              "displayName": "Intitule_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lien_Direct_Gmail",
+              "displayName": "Lien_Direct_Gmail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Derniere_soumission",
+              "displayName": "Derniere_soumission",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens_utilises",
+              "displayName": "Tokens_utilises",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2048,
+        0
+      ],
+      "id": "669eb47b-8e54-42ff-ba46-d6b09ca6bf17",
+      "name": "Validation mail send",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lXPXMmMAWcq6uE8R",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Demande d'accompagnement - Christophe Poncet",
+        "formDescription": "Expliquez-moi votre défi actuel en quelques lignes pour que je puisse préparer notre échange",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "jean.dupont@entreprise.fr",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Pays",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "France"
+                  },
+                  {
+                    "option": "Belgique"
+                  },
+                  {
+                    "option": "Corse"
+                  },
+                  {
+                    "option": "EU"
+                  },
+                  {
+                    "option": "Autres"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Besoins",
+              "fieldType": "textarea",
+              "placeholder": "En 2 ou 3 phrases, expliquez votre situation...",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "rgpd",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "J'accepte que mes données soient traitées pour qualification automatique et que Christophe Poncet me recontacte."
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        64,
+        224
+      ],
+      "id": "6e6cbd43-fb84-4acb-9bf8-741f7aaa5818",
+      "name": "Formulaire",
+      "webhookId": "5491295c-af98-4426-894c-82bf043ca580",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aabf786f-bdfd-48b3-a10c-c87453a7a213",
+              "leftValue": "={{ $json.Type_lead }}",
+              "rightValue": "CHAUD",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        224
+      ],
+      "id": "3a890b0a-0b0a-40a9-b886-47ce5a84afbe",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Normalisation').item.json.email }}",
+        "subject": "={{ $('AI Agent').item.json.output.sujet_email }}",
+        "message": "=Bonjour {{ $('Normalisation').item.json.Name }}, {{ $('AI Agent').item.json.output.corps_email_complet.replace('[URL_AGENDA]', '<a href=\"' + $('Normalisation').item.json.lien_calendrier + '\">cliquer ici pour choisir votre créneau</a>') }} Bien à vous, Christophe Poncet",
+        "options": {
+          "appendAttribution": false,
+          "bccList": "netroninos.jv@gmail.com",
+          "senderName": "Christophe Poncet",
+          "replyTo": ""
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        0
+      ],
+      "id": "0d864484-efc9-4808-820a-c2b1896fe6f5",
+      "name": "Send a message",
+      "webhookId": "8e450831-9cef-49bb-be13-8bd2caec3d43",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Bayzmr9ePmWdToL",
+          "name": "captain"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_context }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Tu es un analyste CRM. Tu dois produire UNIQUEMENT un JSON valide (aucun texte autour, aucun Markdown).\n\nRègles:\n- Respecte exactement les clés du schéma.\n- type_lead: CHAUD, TIEDE ou FROID (si tu écris TIÈDE c'est accepté aussi).\n- score_confiance: nombre 0-100.\n- Si timeline/budget non précisé: \"Non précisé\".\n- sujet_email commence par \"Re : votre demande de coaching\".\n- corps_email_complet doit se terminer par: \"Vous pouvez choisir votre créneau ici : [URL_AGENDA]\"\n\nNe retourne que le JSON.\n",
+          "returnIntermediateSteps": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        624,
+        224
+      ],
+      "id": "bc5b3a89-1e40-4369-981b-b1a9a9374dc0",
+      "name": "AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        576,
+        384
+      ],
+      "id": "f1120bfc-c53b-4c25-ba61-cc30fa6349c8",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "g1I5vYXiH7nvxbYX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"type_lead\": {\n      \"type\": \"string\",\n      \"enum\": [\"CHAUD\", \"TIEDE\", \"TIÈDE\", \"FROID\"],\n      \"description\": \"Qualification du lead. Valeurs: CHAUD, TIEDE/TIÈDE, FROID.\"\n    },\n    \"intention\": {\n      \"type\": \"string\"\n    },\n    \"timeline\": {\n      \"type\": \"string\"\n    },\n    \"budget\": {\n      \"type\": \"string\"\n    },\n    \"score_confiance\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 100\n    },\n    \"justification_ia\": {\n      \"type\": \"string\"\n    },\n    \"resume_besoin\": {\n      \"type\": \"string\"\n    },\n    \"phrase_accroche_personnalisee\": {\n      \"type\": \"string\"\n    },\n    \"corps_email_complet\": {\n      \"type\": \"string\",\n      \"pattern\": \"Vous pouvez choisir votre créneau ici : \\\\[URL_AGENDA\\\\]\\\\s*$\",\n      \"description\": \"Doit finir par la phrase + [URL_AGENDA] (espaces/retours ligne autorisés).\"\n    },\n    \"sujet_email\": {\n      \"type\": \"string\",\n      \"pattern\": \"^Re\\\\s*:\\\\s*votre demande de coaching\",\n      \"description\": \"Doit commencer par: Re : votre demande de coaching\"\n    }\n  },\n  \"required\": [\n    \"type_lead\",\n    \"intention\",\n    \"timeline\",\n    \"budget\",\n    \"score_confiance\",\n    \"justification_ia\",\n    \"resume_besoin\",\n    \"phrase_accroche_personnalisee\",\n    \"corps_email_complet\",\n    \"sujet_email\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        816,
+        384
+      ],
+      "id": "e812eb80-40f8-45c6-83a1-c6465d3d947d",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "content": "##Normalisation\nNettoie et uniformise les données issues du formulaire (ex : mise en forme des noms, majuscules, accents"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -32
+      ],
+      "id": "9469566f-1952-4119-87a8-36c52ae5fca8",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "##agent ia\nUtilise l’IA pour analyser la demande et générer une fiche prospect structurée (score, intention, résumé…)."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -32
+      ],
+      "id": "98e288f8-976d-49c7-a994-f9ed471210ee",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "##Mise à jour client\nInsère ou met à jour les informations du prospect dans le Google Sheet principal."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -32
+      ],
+      "id": "edadb22a-5860-4d90-8dd6-77e3544ccef9",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "##If\nVérifie si le prospect a bien été analysé et s’il remplit certains critères (ex : prospect chaud) avant d’envoyer un email."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -32
+      ],
+      "id": "3836edfd-2346-46b5-85ae-fe8402568f2a",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "##Send a message\nGénère un email personnalisé avec le nom du prospect, une accroche IA, un lien de prise de rendez-vous et une signature finale."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -208
+      ],
+      "id": "fde810e0-ffe1-4a70-b19a-5ddd7f9379a9",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "##Validation mail send\nMet à jour le Google Sheet pour confirmer l’envoi de l’email."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        -208
+      ],
+      "id": "15f79608-2b21-4804-9fa9-33c6e318b342",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {
+    "Normalisation": [
+      {
+        "json": {
+          "Name": "Djo",
+          "email": "atrion@logo.com",
+          "ai_context": "Voici une demande de coaching pour Christophe Poncet. Prospect : Djo | Pays : Corse | Besoin exprimé : je souhaite être mis en relation avec vous afin d'apprend ç maitrise le gestion d'équipe en entreprise et m'améliorés à l'oral mon budget peu s'adapter à votre demande | Engagement RGPD : J'accepte que mes données soient traitées pour qualification automatique et que Christophe Poncet me recontacte.",
+          "sessionId ": "atrion@logo.com",
+          "lien_calendrier": "https://calendar.app.google/yL3BHm4hjw6Fjaty7"
+        }
+      }
+    ],
+    "AI Agent": [
+      {
+        "json": {
+          "output": {
+            "type_lead": "TIEDE",
+            "intention": "Apprendre à maîtriser la gestion d'équipe en entreprise et améliorer l'expression orale",
+            "timeline": "Non précisé",
+            "budget": "Peu s'adapter à votre demande",
+            "score_confiance": 70,
+            "justification_ia": "Le prospect exprime un besoin clair de coaching en gestion d'équipe et amélioration orale avec un budget flexible, ce qui montre une intention sérieuse mais sans urgence temporelle définie.",
+            "resume_besoin": "Le prospect souhaite un coaching pour mieux gérer une équipe en entreprise et s'améliorer à l'oral.",
+            "phrase_accroche_personnalisee": "Bonjour Djo, ravi de voir votre intérêt pour améliorer vos compétences en gestion d'équipe et communication orale.",
+            "corps_email_complet": "Bonjour Djo,\n\nMerci pour votre demande de coaching. Je suis heureux de pouvoir vous accompagner dans votre objectif d'améliorer la gestion d'équipe et vos compétences orales. Votre budget flexible nous permettra de trouver ensemble la meilleure formule adaptée à vos besoins.\n\nN'hésitez pas à me faire part de vos disponibilités pour que nous puissions démarrer rapidement.\n\nVous pouvez choisir votre créneau ici : [URL_AGENDA]",
+            "sujet_email": "Re : votre demande de coaching"
+          }
+        }
+      }
+    ],
+    "mise à jour client": [
+      {
+        "json": {
+          "Derniere_soumission": "2026-01-17 16:01:12",
+          "Date_reçus": "2026-01-17 16:01:12",
+          "Nom": "Djo",
+          "Texte_client": "Voici une demande de coaching pour Christophe Poncet. Prospect : Djo | Pays : Corse | Besoin exprimé : je souhaite être mis en relation avec vous afin d'apprend ç maitrise le gestion d'équipe en entreprise et m'améliorés à l'oral mon budget peu s'adapter à votre demande | Engagement RGPD : J'accepte que mes données soient traitées pour qualification automatique et que Christophe Poncet me recontacte.",
+          "Email": "atrion@logo.com",
+          "Pays": "Corse",
+          "Type_lead": "TIEDE",
+          "Intention": "Apprendre à maîtriser la gestion d'équipe en entreprise et améliorer l'expression orale",
+          "Timeline": "Non précisé",
+          "Budget": "Peu s'adapter à votre demande",
+          "Score_confiance": 70,
+          "Justification_ia": "Le prospect exprime un besoin clair de coaching en gestion d'équipe et amélioration orale avec un budget flexible, ce qui montre une intention sérieuse mais sans urgence temporelle définie.",
+          "Resume_besoin": "Le prospect souhaite un coaching pour mieux gérer une équipe en entreprise et s'améliorer à l'oral."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Formulaire": {
+      "main": [
+        [
+          {
+            "node": "Normalisation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalisation": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mise à jour client": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Validation mail send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "mise à jour client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "pafFHP0oemMaFRMt"
+  },
+  "versionId": "7771bfff-3136-444c-aba8-76318cfdffc8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d1117b063e960848a7bce8e77a8fc680199da682ac55c2b42990e570883b3d0e"
+  },
+  "id": "ygd6khkfLMtA7HXb",
+  "tags": []
+}
