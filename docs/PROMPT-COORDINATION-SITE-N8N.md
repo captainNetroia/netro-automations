@@ -3,6 +3,9 @@
 > Utilise ce prompt dans une session Claude Code avec accès MCP n8n
 > pour résoudre les défaillances entre le site et l'automatisation CRM.
 
+> ⚡ **Mise à jour 2026-05-20** : Nouveau briefing disponible pour l'activation du Terminal Agent :
+> → `docs/PROMPT-SESSION-TERMINAL-AGENT-ACTIVATION.md`
+
 ---
 
 ## Contexte — Ce que la session SITE a déjà fait
