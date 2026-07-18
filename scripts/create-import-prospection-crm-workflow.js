@@ -13,12 +13,13 @@
  * un defaut du premier import ou le telephone etait noye dans le texte de
  * resume_besoins au lieu d'avoir sa propre colonne exploitable/filtrable.
  *
- * Mapping prospection -> CRM (un prospect scrape n'a pas d'email/besoin
- * exprime — ce sont des colonnes pour des LEADS ENTRANTS qualifies, un
- * prospect scrape est en amont de ca) :
+ * Mapping prospection -> CRM :
  *   date            <- date d'import (ISO)
  *   name            <- nom entreprise + ", " + commune (identification claire)
- *   email           <- vide (pas encore contacte, a completer en appel)
+ *   email           <- $json.email si trouve (SIRENE ne le fournit pas ;
+ *                      colonne native gosom vide en pratique ; enrichi par
+ *                      email_enrichment.py — scraping site web, ~52% de
+ *                      reussite sur le lot 2026-07-18), sinon vide
  *   service         <- "prospection" (distingue des leads entrants "starter/avance")
  *   type_besoin     <- "a_qualifier" (pas encore determine, contrairement a un lead entrant)
  *   budget_estime   <- effectif_salaries en texte (proxy budget, cf. criteres-ciblage-prospects.md)
@@ -208,7 +209,7 @@ return jsonProspects.map(p => ({ json: p }));
         value: {
           date:           '={{ $now.toISO() }}',
           name:           '={{ $json.nom + ($json.commune ? ", " + $json.commune : "") }}',
-          email:          '',
+          email:          '={{ $json.email || "" }}',
           service:        'prospection',
           type_besoin:    'a_qualifier',
           budget_estime:  '={{ $json.effectif_salaries ? $json.effectif_salaries + " salaries (proxy budget)" : "" }}',
