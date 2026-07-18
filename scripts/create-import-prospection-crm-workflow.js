@@ -6,9 +6,12 @@
  * "Feuille 1" — decision Jordan 2026-07-18 : reutiliser le CRM existant
  * plutot que creer un nouvel onglet separe.
  *
- * Colonnes reelles du CRM ("Feuille 1", verifiees le 2026-07-18) :
- * date, name, email, service, type_besoin, budget_estime, urgence,
- * score_lead, resume_besoins, horodatage, segment_marche, canal
+ * Colonnes du CRM ("Feuille 1") : les 12 d'origine
+ * (date, name, email, service, type_besoin, budget_estime, urgence,
+ * score_lead, resume_besoins, horodatage, segment_marche, canal)
+ * + 2 colonnes M/N ajoutees le 2026-07-18 (telephone, site_web) — corrige
+ * un defaut du premier import ou le telephone etait noye dans le texte de
+ * resume_besoins au lieu d'avoir sa propre colonne exploitable/filtrable.
  *
  * Mapping prospection -> CRM (un prospect scrape n'a pas d'email/besoin
  * exprime — ce sont des colonnes pour des LEADS ENTRANTS qualifies, un
@@ -21,10 +24,12 @@
  *   budget_estime   <- effectif_salaries en texte (proxy budget, cf. criteres-ciblage-prospects.md)
  *   urgence         <- "normale" (valeur par defaut coherente avec les leads existants)
  *   score_lead      <- score du moteur de regles (0-100, memes unites que le CRM)
- *   resume_besoins  <- "Prospect [secteur] a [commune] (SIREN [siren]). Tel: [tel]. Site: [site]. [raison score]"
+ *   resume_besoins  <- "Prospect [secteur] a [commune] (SIREN [siren])"
  *   horodatage      <- meme timestamp ISO que "date"
  *   segment_marche  <- vide (a determiner en appel, cf. criteres-ciblage-prospects.md § segment A/B/C)
  *   canal           <- "prospection-sirene-gmaps" (distingue des leads via "email"/formulaire)
+ *   telephone       <- $json.telephone (colonne M, dediee)
+ *   site_web        <- $json.site_web (colonne N, dediee)
  *
  * Reutilisable pour chaque nouveau lot de prospection (autres mots-cles,
  * autres secteurs) — pas un script jetable pour ce seul import.
@@ -49,6 +54,7 @@ const SHEETS_CRED_ID = '96DyhZeedQou7Yho'; // "Google Sheets account", deja auto
 const N = {
   trigger: 'Webhook Import',
   code:    'Lire Prospects JSON',
+  clear:   'Vider Ancien Import',
   save:    'Ajouter au CRM',
 };
 
@@ -122,12 +128,61 @@ if (body.token !== '${WEBHOOK_TOKEN}') {
   throw new Error('Token invalide — import refuse.');
 }
 
+if (body.action === 'clear_prospection') {
+  return [{ json: { _clear_only: true } }];
+}
+
 const jsonProspects = body.prospects;
 if (!Array.isArray(jsonProspects) || jsonProspects.length === 0) {
-  throw new Error('body.prospects vide ou absent.');
+  throw new Error('body.prospects vide ou absent (ou body.action="clear_prospection" pour vider les lignes de prospection existantes).');
 }
 return jsonProspects.map(p => ({ json: p }));
 `.trim(),
+    },
+  },
+  {
+    // Vide les lignes 19 a 108 (89 anciens prospects + 1 ligne de test) —
+    // jamais les lignes 1-18 (en-tete + 2 leads entrants existants).
+    // Parametres verifies sur le code source reel n8n (clear.operation.ts) :
+    // clear="specificRows", startIndex, rowsToDelete.
+    // N'agit que si le payload contient action="clear_prospection" —
+    // sinon ce node est court-circuite par l'IF ci-dessous.
+    id: 'if-clear-01',
+    name: 'Si Vider',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2,
+    position: [560, 250],
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 },
+        conditions: [
+          {
+            leftValue: '={{ $json._clear_only }}',
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'true' },
+          },
+        ],
+        combinator: 'and',
+      },
+      options: {},
+    },
+  },
+  {
+    id: 'clear-01',
+    name: N.clear,
+    type: 'n8n-nodes-base.googleSheets',
+    typeVersion: 4.4,
+    position: [780, 150],
+    credentials: {
+      googleSheetsOAuth2Api: { id: SHEETS_CRED_ID, name: 'Google Sheets account' },
+    },
+    parameters: {
+      operation: 'clear',
+      documentId: { __rl: true, value: CRM_SHEET_ID, mode: 'id' },
+      sheetName:  { __rl: true, value: CRM_TAB, mode: 'name' },
+      clear: 'specificRows',
+      startIndex: 19,
+      rowsToDelete: 90,
     },
   },
   {
@@ -159,10 +214,12 @@ return jsonProspects.map(p => ({ json: p }));
           budget_estime:  '={{ $json.effectif_salaries ? $json.effectif_salaries + " salaries (proxy budget)" : "" }}',
           urgence:        'normale',
           score_lead:     '={{ $json.score }}',
-          resume_besoins: '={{ "Prospect " + ($json.libelle_secteur || "secteur inconnu") + " a " + ($json.commune || $json.code_postal || "commune inconnue") + (($json.siren) ? " (SIREN " + $json.siren + ")" : "") + ". Tel: " + ($json.telephone || "non trouve") + ". Site: " + ($json.site_web || "non trouve") + "." }}',
+          resume_besoins: '={{ "Prospect " + ($json.libelle_secteur || "secteur inconnu") + " a " + ($json.commune || $json.code_postal || "commune inconnue") + (($json.siren) ? " (SIREN " + $json.siren + ")" : "") }}',
           horodatage:     '={{ $now.toISO() }}',
           segment_marche: '',
           canal:          'prospection-sirene-gmaps',
+          telephone:      '={{ $json.telephone || "" }}',
+          "site web":     '={{ $json.site_web || "" }}',
         },
         matchingColumns: [],
         schema: [],
@@ -178,8 +235,12 @@ return jsonProspects.map(p => ({ json: p }));
 ];
 
 const connections = {
-  [N.trigger]: { main: [[{ node: N.code, type: 'main', index: 0 }]] },
-  [N.code]:    { main: [[{ node: N.save, type: 'main', index: 0 }]] },
+  [N.trigger]:  { main: [[{ node: N.code, type: 'main', index: 0 }]] },
+  [N.code]:     { main: [[{ node: 'Si Vider', type: 'main', index: 0 }]] },
+  'Si Vider':   { main: [
+    [{ node: N.clear, type: 'main', index: 0 }],  // true : action=clear_prospection
+    [{ node: N.save,  type: 'main', index: 0 }],  // false : import normal
+  ]},
 };
 
 async function main() {
